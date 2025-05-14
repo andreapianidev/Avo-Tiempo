@@ -1,0 +1,20 @@
+node_modules
+# File .env
+.env
+*.env
+.env.local
+.env.*.local
+
+# Large files
+*.log
+*.tar.gz
+*.zip
+*.dmg
+*.pkg
+
+# Node modules cache
+node_modules/.cache/default-development/*.pack
+
+# System files
+.DS_Store
+Thumbs.db

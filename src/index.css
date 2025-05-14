@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+
+body {
+  @apply bg-[#FFF8F0] text-[#2C2C2C] font-sans;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+/* Fix per lo scrolling in app Ionic */
+.ion-page {
+  overflow-y: auto !important;
+}
+
+ion-content {
+  --overflow: auto;
+}
+
+/* Stile specifico per la tab bar di Ionic */
+ion-tab-bar {
+  --background: #fff8ed !important;
+  --border: 1px solid var(--color-border);
+}
+
+/* Assicuriamoci che il contenuto principale sia scrollabile */
+.ion-page > div {
+  height: auto !important;
+  min-height: 100%;
+}
+
+@layer components {
+  .alert-box {
+    @apply bg-[#FDD7C0] text-[#B54200] p-3 rounded-lg mb-4;
+  }
+  
+  .ai-box {
+    @apply bg-[#FFF2E0] border border-amber-200 p-4 rounded-xl mb-4;
+  }
+  
+  .forecast-card {
+    @apply bg-white p-3 rounded-lg shadow-sm text-center mx-2 min-w-[80px];
+  }
+}

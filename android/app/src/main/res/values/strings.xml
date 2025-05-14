@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AVOWeather</string>
+    <string name="title_activity_main">AVOWeather</string>
+    <string name="package_name">com.avoagency.avoweather</string>
+    <string name="custom_url_scheme">com.avoagency.avoweather</string>
+</resources>
