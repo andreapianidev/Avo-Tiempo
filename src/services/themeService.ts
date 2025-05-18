@@ -58,9 +58,10 @@ export const applyTheme = (theme: ThemeMode): void => {
     }
     
     // Also update meta theme-color for browser UI
+    // Il tema scuro è ispirato alle notti delle Isole Canarie: nero profondo con sfumature di blu e stelle brillanti
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', prefersDark ? '#1A1A1A' : '#FFF8F0');
+      metaThemeColor.setAttribute('content', prefersDark ? '#000000' : '#FFF8F0');
     }
   } catch (error) {
     console.error('Error applying theme:', error);

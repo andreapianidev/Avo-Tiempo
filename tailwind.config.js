@@ -9,39 +9,47 @@ module.exports = {
       colors: {
         'bg-main': {
           light: '#FFF8ED', // Beige molto chiaro come nell'immagine 2
-          dark: '#2B2418'
+          dark: '#000000' // Nero puro per la notte canariana
         },
         'text-primary': {
           light: '#3E3121', // Marrone scuro
-          dark: '#F5E7C8'
+          dark: '#03A9F4' // Azzurro brillante stellare
         },
         'text-secondary': {
           light: '#6B5640', // Marrone più chiaro
-          dark: '#D4C7A6'
+          dark: '#C0D8FF' // Azzurro chiaro stellare
         },
         'alert-bg': {
           light: '#FFD19A', // Arancione chiaro per l'alert
-          dark: '#6B4D2E'
+          dark: '#1E2746' // Blu notte profondo
         },
         'alert-text': {
           light: '#7A4100', // Marrone arancione
-          dark: '#FFD9A8'
+          dark: '#FFD9A8' // Conservato per contrasto
         },
         'ai-box-bg': {
           light: '#FFF2E0', // Crema chiaro
-          dark: '#3D3020'
+          dark: '#121836' // Blu notte delle Canarie
         },
         'card-bg': {
           light: '#FFF4E2', // Beige molto chiaro per le card
-          dark: '#32281A'
+          dark: '#0A0E1F' // Blu notte quasi nero
         },
         'border-color': {
           light: '#EADEC7', // Beige chiaro per i bordi
-          dark: '#5A4A33'
+          dark: '#2D3863' // Blu medio notte
         },
         'highlight': {
           light: '#F0CA5C',  // Giallo/oro per le icone
-          dark: '#F0CA5C'    // Stesso colore in dark mode
+          dark: '#FFD662'    // Giallo più brillante, come le stelle canarie
+        },
+        'star': {
+          light: '#FFEBB3',  // Stella brillante (light mode)
+          dark: '#FFEBB3'    // Stella brillante (dark mode)
+        },
+        'night-purple': {
+          light: '#D8CFFF',  // Viola chiaro (light mode)
+          dark: '#5D4FB3'    // Viola notte canariana (dark mode)
         },
         'avocado': {
           light: '#568203',  // Verde avocado

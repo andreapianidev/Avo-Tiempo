@@ -35,6 +35,8 @@ export interface WeatherData {
   windSpeed: number;
   condition: string;
   alert?: string;
+  lat: number;  // Latitude for map and POI features
+  lon: number;  // Longitude for map and POI features
   // Dati aggiuntivi
   pressure?: number;        // Pressione atmosferica in hPa
   visibility?: number;      // Visibilità in km
@@ -80,6 +82,11 @@ export const fetchWeather = async (city?: string): Promise<WeatherData | null> =
     const cachedData = getCachedWeatherData(city);
     if (cachedData) {
       console.log(`[WEATHER SERVICE] Offline: usando dati persistenti in cache per ${city}`);
+      // Ensure cached data has lat and lon properties
+      if (!cachedData.lat || !cachedData.lon) {
+        cachedData.lat = 28.6; // Default latitude for El Paso, La Palma
+        cachedData.lon = -17.8; // Default longitude for El Paso, La Palma
+      }
       return cachedData;
     }
   }
@@ -171,6 +178,8 @@ export const fetchWeather = async (city?: string): Promise<WeatherData | null> =
         windSpeed: Math.round(currentData.wind.speed * 3.6), // Convert m/s to km/h
         condition: mapWeatherCondition(currentData.weather[0].id),
         alert: 'Solo se muestran datos actuales. Previsión no disponible.',
+        lat: currentData.coord.lat,
+        lon: currentData.coord.lon,
         hourlyForecast: Array(8).fill(null).map((_, i) => ({
           time: i === 0 ? 'Ahora' : `${new Date().getHours() + i}:00`,
           temperature: Math.round(currentData.main.temp),
@@ -218,6 +227,8 @@ export const fetchWeather = async (city?: string): Promise<WeatherData | null> =
       windSpeed: Math.round(currentData.wind.speed * 3.6), // Convert m/s to km/h
       condition: mapWeatherCondition(currentData.weather[0].id),
       alert,
+      lat: currentData.coord.lat,
+      lon: currentData.coord.lon,
       hourlyForecast,
       // Dati aggiuntivi
       pressure: currentData.main.pressure,
@@ -247,6 +258,12 @@ export const fetchWeather = async (city?: string): Promise<WeatherData | null> =
     if (cachedData) {
       console.log(`[WEATHER SERVICE] Errore API: usando dati in cache come fallback per ${city}`);
       // Aggiorniamo il campo alert per informare l'utente
+      // Ensure cached data has lat and lon properties
+      if (!cachedData.lat || !cachedData.lon) {
+        cachedData.lat = 28.6; // Default latitude for El Paso, La Palma
+        cachedData.lon = -17.8; // Default longitude for El Paso, La Palma
+      }
+      
       return {
         ...cachedData,
         alert: cachedData.alert || 'Mostrando datos anteriores. No se pudieron obtener datos actualizados.'
@@ -283,6 +300,8 @@ export const getMockWeatherData = (city: string): WeatherData => {
     windSpeed: 28,
     condition: 'sunny',
     alert: 'Calima moderada durante las próximas 24 horas.',
+    lat: 28.6, // Default latitude for El Paso, La Palma
+    lon: -17.8, // Default longitude for El Paso, La Palma,
     // Dati meteo aggiuntivi di esempio
     pressure: 1013,
     visibility: 10,

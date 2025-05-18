@@ -1,4 +1,7 @@
 // AI Service to handle DeepSeek API calls
+import { WeatherAlert } from './aemetService';
+import { POI } from './osmService';
+
 const API_KEY = 'sk-69133b720ab34953a15d4f563870cae1';
 const API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
@@ -29,8 +32,16 @@ const pendingRequests: Record<string, PendingRequest> = {};
 /**
  * Genera un ID univoco per la cache basato sui parametri di input
  */
-const getCacheKey = (location: string, condition: string, temperature: number, alerta?: string): string => {
-  return `${location}_${condition}_${temperature}_${alerta || 'noalert'}`;
+const getCacheKey = (
+  location: string, 
+  condition: string, 
+  temperature: number, 
+  alerts?: WeatherAlert[], 
+  pois?: POI[]
+): string => {
+  const alertsKey = alerts?.length ? alerts.map(a => a.id).join('_') : 'noalerts';
+  const poisKey = pois?.length ? pois.slice(0, 3).map(p => p.id).join('_') : 'nopois';
+  return `${location}_${condition}_${temperature}_${alertsKey}_${poisKey}`;
 };
 
 /**
@@ -47,7 +58,8 @@ export const getAIInsight = async (
   location: string, 
   condition: string, 
   temperature: number, 
-  alerta?: string,
+  alerts?: WeatherAlert[],
+  pois?: POI[],
   onStreamUpdate?: (text: string) => void
 ): Promise<string> => {
   // Validazione parametri per prevenire chiamate con dati non validi
@@ -56,7 +68,7 @@ export const getAIInsight = async (
     return 'Generazione non possibile: parametri mancanti.';
   }
   
-  const cacheKey = getCacheKey(location, condition, temperature, alerta);
+  const cacheKey = getCacheKey(location, condition, temperature, alerts, pois);
   
   // Controlla se abbiamo già una richiesta in corso per questi stessi parametri
   if (pendingRequests[cacheKey]) {
@@ -104,7 +116,59 @@ export const getAIInsight = async (
         onStreamUpdate('Generazione in corso...');
       }
       
-      const prompt = `Eres un canario simpático. Describe el clima en ${location} con ${temperature} grados y condición: ${condition}. ${alerta ? `Hay alerta: ${alerta}.` : 'No hay alertas.'} Sé gracioso y usa expresiones típicas canarias.`;
+      // Costruisci un prompt più dettagliato con informazioni su allerte e POI
+      let alertsText = '';
+      if (alerts && alerts.length > 0) {
+        alertsText = 'Hay alertas meteorológicas: ' + 
+          alerts.map(alert => `${alert.phenomenon} (${alert.level}) en ${alert.zone}`).join(', ') + '.';
+      } else {
+        alertsText = 'No hay alertas meteorológicas activas.';
+      }
+      
+      let poisText = '';
+      if (pois && pois.length > 0) {
+        // Raggruppa i POI per categoria
+        const poiCategories: Record<string, POI[]> = {};
+        pois.forEach(poi => {
+          if (!poiCategories[poi.category]) {
+            poiCategories[poi.category] = [];
+          }
+          poiCategories[poi.category].push(poi);
+        });
+        
+        // Crea un testo con i POI raggruppati per categoria
+        poisText = 'Lugares cercanos: ';
+        Object.entries(poiCategories).forEach(([category, categoryPois]) => {
+          const categoryName = {
+            'tourism': 'Turismo',
+            'natural': 'Naturaleza',
+            'leisure': 'Ocio',
+            'amenity': 'Servicios',
+            'other': 'Otros'
+          }[category] || category;
+          
+          poisText += `${categoryName}: ${categoryPois.slice(0, 3).map(p => p.name).join(', ')}. `;
+        });
+      }
+      
+      const prompt = `Eres un auténtico canario de toda la vida que da consejos sobre el tiempo y actividades en las islas.
+      
+      Información actual:
+      - Ubicación: ${location}
+      - Temperatura: ${temperature}°C
+      - Condición: ${condition}
+      - ${alertsText}
+      ${poisText ? `- ${poisText}` : ''}
+      
+      Instrucciones:
+      1. OBLIGATORIO: Usa MUCHAS expresiones típicas canarias como "¡Fos, chacho!", "¡Qué tolai!", "está afilado el calor", "mi niño/a", "!Ay, madre mía de mi vida!", "arrorró" (para calmar), etc.
+      2. Describe el clima actual de forma graciosa y exagerada, como hablaría un canario de toda la vida.
+      3. Si hay alertas, menciónalas con expresiones de asombro típicas canarias y da consejos de seguridad.
+      4. Sugiere 1-2 actividades basadas en el clima y los lugares cercanos disponibles, siempre desde una perspectiva muy canaria.
+      5. Usa un tono muy amistoso, colorido y divertido - ¡exagera el acento canario al máximo!
+      6. Incluye alguna referencia a comida canaria (papas arrugadas, mojo, gofio) o costumbre local.
+      7. Limita tu respuesta a 3-4 frases cortas y con mucha personalidad canaria.
+      8. NO uses lenguaje artificial o académico, habla como un auténtico canario de barrio.`;
       
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -176,7 +240,7 @@ export const getAIInsight = async (
       return result;
     } catch (error) {
       console.error('Error getting AI insight:', error);
-      const fallback = getFallbackInsight(location, condition, temperature, alerta);
+      const fallback = getFallbackInsight(location, condition, temperature, alerts, pois);
       
       // Aggiorna lo streaming con il fallback se richiesto
       if (onStreamUpdate) onStreamUpdate(fallback);
@@ -210,7 +274,8 @@ export const getFallbackInsight = (
   location: string,
   condition: string,
   temperature: number,
-  alerta?: string
+  alerts?: WeatherAlert[],
+  pois?: POI[]
 ): string => {
   // Pre-generated funny insights for different weather conditions
   const sunnyInsights = [
@@ -239,9 +304,24 @@ export const getFallbackInsight = (
     insight = rainyInsights[Math.floor(Math.random() * rainyInsights.length)];
   }
   
-  // Add alert message if present
-  if (alerta) {
-    insight += ` Y pendiente a esa alerta de "${alerta}" que está más seria que mi madre cuando le digo que no quiero más papas arrugadas.`;
+  // Add alert messages if present
+  if (alerts && alerts.length > 0) {
+    const alertText = alerts[0].phenomenon;
+    insight += ` Y pendiente a esa alerta de "${alertText}" que está más seria que mi madre cuando le digo que no quiero más papas arrugadas.`;
+  }
+  
+  // Add POI suggestion if available
+  if (pois && pois.length > 0) {
+    // Pick a random POI from the first 3
+    const randomPoi = pois[Math.floor(Math.random() * Math.min(3, pois.length))];
+    
+    if (condition.includes('sunny') || condition.includes('clear')) {
+      insight += ` ¡Chacho! Aprovecha para visitar ${randomPoi.name}, que está cerquita y con este tiempo está más bonito que un timple nuevo.`;
+    } else if (condition.includes('rain')) {
+      insight += ` Con esta lluvia, mejor quédate en casa o date una vueltita por ${randomPoi.name} cuando escampe un poco.`;
+    } else {
+      insight += ` Ya que estás por ahí, date una vuelta por ${randomPoi.name}, que está a tiro de piedra.`;
+    }
   }
   
   return insight;

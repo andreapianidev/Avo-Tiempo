@@ -6,6 +6,8 @@ export interface LocationItem {
   temperature?: number;
   condition?: string;
   timestamp?: number;
+  lat?: number;
+  lon?: number;
 }
 
 // Storage keys
@@ -28,7 +30,7 @@ export const getSavedLocations = (): LocationItem[] => {
 /**
  * Save a new location
  */
-export const saveLocation = (name: string): LocationItem | null => {
+export const saveLocation = (name: string, lat?: number, lon?: number): LocationItem | null => {
   try {
     const locations = getSavedLocations();
     
@@ -40,7 +42,9 @@ export const saveLocation = (name: string): LocationItem | null => {
     const newLocation: LocationItem = {
       id: Date.now().toString(),
       name,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      lat,
+      lon
     };
     
     const updatedLocations = [...locations, newLocation];

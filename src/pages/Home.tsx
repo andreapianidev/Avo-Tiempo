@@ -6,6 +6,7 @@ import WeatherBox from '../components/WeatherBox';
 import ForecastCard from '../components/ForecastCard';
 import AIInsight from '../components/AIInsight';
 import WeatherDetails from '../components/WeatherDetails';
+import WeatherAlertsAndPOI from '../components/WeatherAlertsAndPOI';
 import { fetchWeather, WeatherData, getMockWeatherData } from '../services/weatherService';
 import { setCurrentLocation, getCurrentLocation, listenToLocationChanges } from '../services/appStateService';
 import { getAIInsight } from '../services/aiService';
@@ -78,8 +79,19 @@ const Home: React.FC = () => {
           data.location,
           data.condition,
           data.temperature,
-          data.alert,
-          (streamText) => {
+          data.alert ? [{
+            source: 'OpenWeather',
+            id: 'ow-alert-1',
+            zone: data.location,
+            province: data.location.split(' ')[0] || 'Unknown',
+            description: data.alert,
+            level: 'yellow',  // Default level
+            startTime: new Date(),
+            endTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+            phenomenon: 'Weather Alert'
+          }] : undefined,
+          undefined, // No POIs for now
+          (streamText: string) => {
             setStreamedAiMessage(streamText);
           }
         );
@@ -383,6 +395,18 @@ const Home: React.FC = () => {
             Los datos meteorológicos se actualizan automáticamente cada hora o cuando cambias de ubicación.
           </p>
         </div>
+        
+        {/* Sezione per allerte meteo e POI */}
+        {weatherData && (
+          <WeatherAlertsAndPOI
+            lat={weatherData.lat}
+            lon={weatherData.lon}
+            location={weatherData.location}
+            condition={weatherData.condition}
+            temperature={weatherData.temperature}
+            className="mt-6"
+          />
+        )}
         
         {/* Spazio vuoto alla fine per garantire che il contenuto sia completamente scrollabile */}
         <div className="h-6"></div>

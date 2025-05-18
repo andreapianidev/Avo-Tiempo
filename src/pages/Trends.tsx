@@ -65,8 +65,19 @@ const Trends: React.FC = () => {
           location,
           summary.dominantCondition,
           summary.averageMaxTemp,
-          `Tendencia a ${summary.averageMaxTemp}°C max y ${summary.averageMinTemp}°C min en ${location}`,
-          (streamText) => {
+          [{ // Convert the string alert to a WeatherAlert object
+            source: 'OpenWeather',
+            id: 'trend-summary-1',
+            zone: location,
+            province: location.split(' ')[0] || 'Unknown',
+            description: `Tendencia a ${summary.averageMaxTemp}°C max y ${summary.averageMinTemp}°C min en ${location}`,
+            level: 'unknown',
+            startTime: new Date(),
+            endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+            phenomenon: 'Tendencia Semanal'
+          }],
+          undefined, // No POIs for trends
+          (streamText: string) => {
             setStreamedAiInsight(streamText);
           }
         );
