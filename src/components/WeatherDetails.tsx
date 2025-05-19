@@ -27,6 +27,7 @@ interface WeatherDetailsProps {
   rain1h?: number;
   snow1h?: number;
   uvIndex?: number;
+  className?: string;
 }
 
 const WeatherDetails: React.FC<WeatherDetailsProps> = ({
@@ -41,7 +42,8 @@ const WeatherDetails: React.FC<WeatherDetailsProps> = ({
   clouds,
   rain1h,
   snow1h,
-  uvIndex
+  uvIndex,
+  className = ''
 }) => {
   // Funzione per formattare l'orario dai timestamp
   const formatTime = (timestamp?: number): string => {
@@ -63,7 +65,7 @@ const WeatherDetails: React.FC<WeatherDetailsProps> = ({
   };
 
   return (
-    <div className="mt-6 bg-[var(--color-card-bg)] rounded-3xl p-5 shadow-sm">
+    <div className={`bg-[var(--color-card-bg)] rounded-3xl p-5 shadow-sm ${className}`}>
       <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
         Detalles Meteorológicos
       </h3>

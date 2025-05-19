@@ -5,7 +5,7 @@
  * Provides structured local storage for different data types, with automatic expiration
  */
 
-import { handleCacheError, ErrorType, AppError } from './errorService';
+import { ErrorType, createError, AppError, logError } from './errorService';
 
 // Cache configuration
 const DEFAULT_CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
@@ -21,43 +21,66 @@ export enum CacheNamespace {
   AI_INSIGHTS = 'ai_insights',
   ALERTS = 'alerts',
   UI_STATE = 'ui_state',
-  WEATHER_DATA = 'weather_data' // Specific for detailed weather objects
+  WEATHER_DATA = 'weather_data', // Specific for detailed weather objects
+  ACTIVITIES = 'activities' // For activities with ratings and recommendations
 }
 
 // Cache item structure
 interface CacheItem<T> {
-  value: T;
+  data: T;
   timestamp: number;
   ttl: number;
   version: string;
 }
 
 /**
+ * Get cache key
+ * @param namespace The data namespace
+ * @param key The cache key
+ */
+const getCacheKey = (namespace: CacheNamespace, key: string): string => {
+  return `${CACHE_PREFIX}${namespace}_${key}`;
+};
+
+/**
+ * Get namespace prefix
+ * @param namespace The data namespace
+ */
+const getNamespacePrefix = (namespace: CacheNamespace): string => {
+  return `${CACHE_PREFIX}${namespace}_`;
+};
+
+/**
  * Set a value in the cache
  * @param namespace The data namespace (weather, locations, etc)
  * @param key The cache key within the namespace
- * @param value The data to cache
+ * @param data The data to cache
  * @param ttl Time to live in milliseconds (default: 1 hour)
  */
-export const setCacheItem = <T>(
-  namespace: CacheNamespace, 
-  key: string, 
-  value: T, 
-  ttl: number = DEFAULT_CACHE_TTL
-): boolean => {
+export const setCacheItem = <T>(namespace: CacheNamespace, key: string, data: T, ttl: number): boolean => {
   try {
-    const cacheKey = `${CACHE_PREFIX}${namespace}_${key}`;
+    const cacheKey = getCacheKey(namespace, key);
     const cacheItem: CacheItem<T> = {
-      value,
+      data: data,
       timestamp: Date.now(),
-      ttl,
+      ttl: ttl,
       version: CACHE_VERSION
     };
     
     localStorage.setItem(cacheKey, JSON.stringify(cacheItem));
     return true;
   } catch (error) {
-    console.error(`[Cache] Error setting cache item ${namespace}.${key}:`, error);
+    // Gestione più specifica dei diversi tipi di errori
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.error(`[CACHE] Storage quota exceeded while setting cache item ${key}:`, error);
+      const appError = createError(ErrorType.STORAGE, 'Storage quota exceeded', error, 
+        'La memoria locale è piena, impossibile salvare nuovi dati in cache');
+      logError(appError);
+    } else {
+      console.error(`[CACHE] Error setting cache item ${key}:`, error);
+      const appError = createError(ErrorType.CACHE, 'Error setting cache item', error);
+      logError(appError);
+    }
     return false;
   }
 };
@@ -66,49 +89,42 @@ export const setCacheItem = <T>(
  * Get a value from the cache
  * @param namespace The data namespace (weather, locations, etc)
  * @param key The cache key within the namespace
- * @param defaultValue Default value to return if item is not in cache or expired
  */
-export const getCacheItem = <T>(
-  namespace: CacheNamespace, 
-  key: string, 
-  defaultValue: T | null = null
-): T | null => {
+export const getCacheItem = <T>(namespace: CacheNamespace, key: string): T | null => {
   try {
-    const cacheKey = `${CACHE_PREFIX}${namespace}_${key}`;
-    const cachedData = localStorage.getItem(cacheKey);
+    const cacheKey = getCacheKey(namespace, key);
+    const cachedItem = localStorage.getItem(cacheKey);
     
-    if (!cachedData) {
-      return defaultValue;
+    if (!cachedItem) {
+      return null;
     }
     
-    const cacheItem: CacheItem<T> = JSON.parse(cachedData);
-    
-    // Check cache version
-    if (cacheItem.version !== CACHE_VERSION) {
-      removeCacheItem(namespace, key);
-      return defaultValue;
-    }
-    
-    // Check expiration
-    if (Date.now() - cacheItem.timestamp > cacheItem.ttl) {
-      return defaultValue;
-    }
-    
-    return cacheItem.value;
-  } catch (error) {
-    console.error(`[Cache] Error getting cache item ${namespace}.${key}:`, error);
-    
-    // Handle cache errors gracefully
-    const appError = handleCacheError(error, `Error al recuperar datos en caché para ${namespace}.${key}`);
-    
-    // Remove corrupted cache item
+    // Parsing con gestione errori migliorata
+    let parsedItem: CacheItem<T>;
     try {
-      removeCacheItem(namespace, key);
-    } catch (removeError) {
-      console.error(`[Cache] Failed to remove corrupted cache item:`, removeError);
+      parsedItem = JSON.parse(cachedItem);
+    } catch (parseError) {
+      console.error(`[CACHE] JSON parsing error for ${key}:`, parseError);
+      localStorage.removeItem(cacheKey); // Rimuove i dati corrotti
+      const appError = createError(ErrorType.CACHE, 'Cache corruption detected', parseError, 
+        'Dati cache corrotti rimossi automaticamente');
+      logError(appError);
+      return null;
     }
     
-    return defaultValue;
+    // Check if the cache item has expired
+    if (Date.now() - parsedItem.timestamp > parsedItem.ttl) {
+      // Remove expired item
+      localStorage.removeItem(cacheKey);
+      return null;
+    }
+    
+    return parsedItem.data;
+  } catch (error) {
+    console.error(`[CACHE] Error getting cache item ${key}:`, error);
+    const appError = createError(ErrorType.CACHE, 'Error retrieving cache item', error);
+    logError(appError);
+    return null;
   }
 };
 
@@ -119,7 +135,7 @@ export const getCacheItem = <T>(
  */
 export const hasCacheItem = (namespace: CacheNamespace, key: string): boolean => {
   try {
-    const cacheKey = `${CACHE_PREFIX}${namespace}_${key}`;
+    const cacheKey = getCacheKey(namespace, key);
     const cachedData = localStorage.getItem(cacheKey);
     
     if (!cachedData) {
@@ -141,7 +157,7 @@ export const hasCacheItem = (namespace: CacheNamespace, key: string): boolean =>
     
     return true;
   } catch (error) {
-    console.error(`[Cache] Error checking cache item ${namespace}.${key}:`, error);
+    console.error(`[CACHE] Error checking cache item ${namespace}.${key}:`, error);
     return false;
   }
 };
@@ -153,7 +169,7 @@ export const hasCacheItem = (namespace: CacheNamespace, key: string): boolean =>
  */
 export const getCacheItemAge = (namespace: CacheNamespace, key: string): number | null => {
   try {
-    const cacheKey = `${CACHE_PREFIX}${namespace}_${key}`;
+    const cacheKey = getCacheKey(namespace, key);
     const cachedData = localStorage.getItem(cacheKey);
     
     if (!cachedData) {
@@ -163,7 +179,7 @@ export const getCacheItemAge = (namespace: CacheNamespace, key: string): number 
     const cacheItem = JSON.parse(cachedData);
     return Date.now() - cacheItem.timestamp;
   } catch (error) {
-    console.error(`[Cache] Error getting cache item age ${namespace}.${key}:`, error);
+    console.error(`[CACHE] Error getting cache item age ${namespace}.${key}:`, error);
     return null;
   }
 };
@@ -175,11 +191,11 @@ export const getCacheItemAge = (namespace: CacheNamespace, key: string): number 
  */
 export const removeCacheItem = (namespace: CacheNamespace, key: string): boolean => {
   try {
-    const cacheKey = `${CACHE_PREFIX}${namespace}_${key}`;
+    const cacheKey = getCacheKey(namespace, key);
     localStorage.removeItem(cacheKey);
     return true;
   } catch (error) {
-    console.error(`[Cache] Error removing cache item ${namespace}.${key}:`, error);
+    console.error(`[CACHE] Error removing cache item ${namespace}.${key}:`, error);
     return false;
   }
 };
@@ -190,7 +206,7 @@ export const removeCacheItem = (namespace: CacheNamespace, key: string): boolean
  */
 export const clearNamespace = (namespace: CacheNamespace): boolean => {
   try {
-    const prefix = `${CACHE_PREFIX}${namespace}_`;
+    const prefix = getNamespacePrefix(namespace);
     const keysToRemove: string[] = [];
     
     // Find all keys in this namespace
@@ -206,7 +222,69 @@ export const clearNamespace = (namespace: CacheNamespace): boolean => {
     
     return true;
   } catch (error) {
-    console.error(`[Cache] Error clearing namespace ${namespace}:`, error);
+    console.error(`[CACHE] Error clearing namespace ${namespace}:`, error);
+    return false;
+  }
+};
+
+/**
+ * Get all keys in a namespace
+ * @param namespace The data namespace
+ * @returns List of keys in the namespace
+ */
+const getAllNamespaceKeys = (namespace: CacheNamespace): string[] => {
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(`${CACHE_PREFIX}${namespace}_`)) {
+        keys.push(key);
+      }
+    }
+    return keys;
+  } catch (error) {
+    console.error(`[CACHE] Error getting all keys for namespace ${namespace}:`, error);
+    const appError = createError(ErrorType.CACHE, `Error getting all keys for namespace ${namespace}`, error);
+    logError(appError);
+    return [];
+  }
+};
+
+/**
+ * Clear all cache items in a specific namespace
+ * @param namespace The cache namespace to clear
+ * @returns Boolean indicating success or failure
+ */
+export const clearCacheByNamespace = (namespace: CacheNamespace): boolean => {
+  try {
+    // Get all localStorage keys
+    const localStorageKeys = Object.keys(localStorage);
+    
+    // Filter keys by namespace prefix
+    const namespacePrefix = getNamespacePrefix(namespace);
+    const keysToRemove = localStorageKeys.filter(key => key.startsWith(namespacePrefix));
+    
+    if (keysToRemove.length === 0) {
+      console.log(`[CACHE] No items found for namespace ${namespace}`);
+      return true; // Non ci sono elementi da rimuovere, consideriamo l'operazione un successo
+    }
+    
+    // Remove all matching keys
+    keysToRemove.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (removeError) {
+        console.warn(`[CACHE] Unable to remove key ${key}:`, removeError);
+        // Continua con gli altri elementi anche se uno fallisce
+      }
+    });
+    
+    console.log(`[CACHE] Successfully cleared ${keysToRemove.length} items from namespace ${namespace}`);
+    return true;
+  } catch (error) {
+    console.error(`[CACHE] Error clearing cache for namespace ${namespace}:`, error);
+    const appError = createError(ErrorType.CACHE, `Error clearing cache for namespace ${namespace}`, error);
+    logError(appError);
     return false;
   }
 };
@@ -264,6 +342,7 @@ export const clearExpiredItems = (): void => {
 /**
  * Get all cache items in a namespace
  * @param namespace The data namespace
+ * @returns Record with cache keys and their values
  */
 export const getNamespaceItems = <T>(namespace: CacheNamespace): Record<string, T> => {
   try {
@@ -287,7 +366,7 @@ export const getNamespaceItems = <T>(namespace: CacheNamespace): Record<string, 
             
             // Extract key without prefix
             const key = fullKey.substring(prefix.length);
-            result[key] = cacheItem.value;
+            result[key] = cacheItem.data;
           }
         } catch (itemError) {
           console.error(`[Cache] Error processing item ${fullKey}:`, itemError);
@@ -357,7 +436,8 @@ export const cacheService = {
   clearNamespace,
   clearExpiredItems,
   getNamespaceItems,
-  updateCacheItem
+  updateCacheItem,
+  getAllNamespaceKeys // Aggiungo questa funzione all'esportazione
 };
 
 export default cacheService;

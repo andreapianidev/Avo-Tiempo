@@ -12,12 +12,16 @@ export const API_KEYS = {
   OPENWEATHER: process.env.REACT_APP_OPENWEATHER_API_KEY || 'b33c9835879f888134e97c6d58d6e4a7',
   // Nessuna chiave necessaria per Overpass API
   OVERPASS: '',
+  // Chiave per Mapbox API
+  // Per ottenere una chiave: https://account.mapbox.com/auth/signup/
+  MAPBOX: process.env.REACT_APP_MAPBOX_TOKEN || 'pk.eyJ1IjoiYXZvLWFnZW5jeSIsImEiOiJjbHI2NXpleTMwYTRqMmtvMWwzZjcxN3lrIn0.OqH-1tofEf8RQSJBZUn9_g',
 };
 
 // URL di base dei servizi
 export const API_BASE_URLS = {
   OPENWEATHER_CURRENT: 'https://api.openweathermap.org/data/2.5',
   OPENWEATHER_ONECALL: 'https://api.openweathermap.org/data/3.0',
+  MAPBOX: 'https://api.mapbox.com',
   OVERPASS: [
     'https://overpass-api.de/api/interpreter',            // Server principale in Germania
     'https://lz4.overpass-api.de/api/interpreter',        // Mirror con compressione LZ4 (più veloce)
@@ -41,10 +45,19 @@ export const API_CONFIG = {
  * Ottiene la configurazione completa per l'API specificata
  * @param apiName Nome dell'API (es. OPENWEATHER, OVERPASS)
  */
-export const getApiConfig = (apiName: 'OPENWEATHER' | 'OVERPASS') => {
+export const getApiConfig = (apiName: 'OPENWEATHER' | 'OVERPASS' | 'MAPBOX') => {
+  let baseUrl;
+  if (apiName === 'OPENWEATHER') {
+    baseUrl = API_BASE_URLS.OPENWEATHER_CURRENT;
+  } else if (apiName === 'MAPBOX') {
+    baseUrl = API_BASE_URLS.MAPBOX;
+  } else {
+    baseUrl = API_BASE_URLS.OVERPASS[0]; // Prende il primo URL dall'array
+  }
+  
   return {
     key: API_KEYS[apiName],
-    baseUrl: apiName === 'OPENWEATHER' ? API_BASE_URLS.OPENWEATHER_CURRENT : API_BASE_URLS.OVERPASS,
+    baseUrl: baseUrl,
     timeout: API_CONFIG.TIMEOUT_MS,
     retryAttempts: API_CONFIG.RETRY_ATTEMPTS,
     retryDelay: API_CONFIG.RETRY_DELAY_MS
@@ -108,11 +121,17 @@ export const fetchWithRetry = async (
  * @param apiName Nome dell'API (es. OPENWEATHER, OVERPASS)
  * @returns Promise<boolean> che risolve a true se la chiave è valida
  */
-export const validateApiKey = async (apiName: 'OPENWEATHER'): Promise<boolean> => {
+export const validateApiKey = async (apiName: 'OPENWEATHER' | 'MAPBOX'): Promise<boolean> => {
   try {
     if (apiName === 'OPENWEATHER') {
       const response = await fetchWithRetry(
         `${API_BASE_URLS.OPENWEATHER_CURRENT}/weather?q=London&appid=${API_KEYS.OPENWEATHER}`
+      );
+      return response.ok;
+    } else if (apiName === 'MAPBOX') {
+      // Verifica la validità della chiave Mapbox
+      const response = await fetchWithRetry(
+        `${API_BASE_URLS.MAPBOX}/styles/v1/mapbox/streets-v11?access_token=${API_KEYS.MAPBOX}`
       );
       return response.ok;
     }

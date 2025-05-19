@@ -13,13 +13,14 @@ import Home from './pages/Home';
 import Locations from './pages/Locations';
 import Trends from './pages/Trends';
 import Settings from './pages/Settings';
+import Activities from './pages/Activities';
 
 /* Services */
 import { getThemePreference } from './services/themeService';
 
 /* Icons for tab bar - importiamo direttamente da FontAwesome per mantenere la coerenza */
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome, faLocationDot, faChartLine, faCog } from '@fortawesome/free-solid-svg-icons';
+import { faHome, faLocationDot, faChartLine, faCog, faHiking } from '@fortawesome/free-solid-svg-icons';
 
 // Inizializza Ionic React
 setupIonicReact({
@@ -54,12 +55,13 @@ function App() {
             <Route path="/home" render={() => <Home />} exact={true} />
             <Route path="/locations" render={() => <Locations />} exact={true} />
             <Route path="/trends" render={() => <Trends />} exact={true} />
+            <Route path="/activities" render={() => <Activities />} exact={true} />
             <Route path="/settings" render={() => <Settings />} exact={true} />
             <Route path="/" render={() => <Redirect to="/home" />} exact={true} />
           </IonRouterOutlet>
           
-          {/* Tab bar (sostituisce il Footer) */}
-          <IonTabBar slot="bottom" className="bg-[#fff8ed] border-t border-[var(--color-border)]">
+          {/* Tab bar (sostituisce il Footer) - con supporto per iOS safe areas */}
+          <IonTabBar slot="bottom" className="bg-[#fff8ed] border-t border-[var(--color-border)] pb-safe">
             <IonTabButton tab="home" href="/home" className="text-[var(--color-text-primary)]">
               <div className="flex flex-col items-center justify-center">
                 <FontAwesomeIcon icon={faHome} className="h-5 w-5" />
@@ -78,6 +80,13 @@ function App() {
               <div className="flex flex-col items-center justify-center">
                 <FontAwesomeIcon icon={faChartLine} className="h-5 w-5" />
                 <IonLabel>Tendenze</IonLabel>
+              </div>
+            </IonTabButton>
+            
+            <IonTabButton tab="activities" href="/activities" className="text-[var(--color-text-primary)]">
+              <div className="flex flex-col items-center justify-center">
+                <FontAwesomeIcon icon={faHiking} className="h-5 w-5" />
+                <IonLabel>Attività</IonLabel>
               </div>
             </IonTabButton>
             

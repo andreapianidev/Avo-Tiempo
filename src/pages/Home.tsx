@@ -1,19 +1,24 @@
 import * as React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotate, faLocationDot, faMapMarkerAlt, faExclamationTriangle, faChartPie, faChartLine, faMap } from '@fortawesome/free-solid-svg-icons';
+import { faRotate, faLocationDot, faMapMarkerAlt, faExclamationTriangle, faChartPie, faChartLine, faMap, faWind } from '@fortawesome/free-solid-svg-icons';
 import WeatherBox from '../components/WeatherBox';
 import ForecastCard from '../components/ForecastCard';
 import AIInsight from '../components/AIInsight';
 import WeatherDetails from '../components/WeatherDetails';
 import WeatherAlertsAndPOI from '../components/WeatherAlertsAndPOI';
 import WeatherBasedPOIRecommendations from '../components/WeatherBasedPOIRecommendations';
+import DailyActivitySuggestion from '../components/DailyActivitySuggestion';
 
-// Importiamo i nuovi componenti di grafici
+// Importiamo i componenti di grafici e analisi
 import POICategoryDistribution from '../components/POICategoryDistribution';
 import POIDistanceDistribution from '../components/POIDistanceDistribution';
 import WeatherTrendChart from '../components/WeatherTrendChart';
 import POIDensityMap from '../components/POIDensityMap';
+import WeatherActivityCorrelation from '../components/WeatherActivityCorrelation';
+import AirQualityTrendChart from '../components/AirQualityTrendChart';
+import WeatherPatternAnalysis from '../components/WeatherPatternAnalysis';
+import WeatherHistory from '../components/WeatherHistory';
 import { fetchWeather, WeatherData, getMockWeatherData } from '../services/weatherService';
 import { setCurrentLocation, getCurrentLocation, listenToLocationChanges } from '../services/appStateService';
 import { getAIInsight } from '../services/aiService';
@@ -371,27 +376,39 @@ const Home: React.FC = () => {
           ))}
         </div>
         
-        {lastUpdated && (
-          <p className="text-xs text-[var(--color-text-secondary)] text-right mt-2 mb-4">
-            Actualizado: {lastUpdated.toLocaleTimeString('es-ES')}
-          </p>
-        )}
-        
-        {/* Sezione per dettagli meteo aggiuntivi */}
+        {/* Weather details */}
         {weatherData && (
-          <WeatherDetails 
-            pressure={weatherData.pressure}
-            visibility={weatherData.visibility}
-            sunrise={weatherData.sunrise}
-            sunset={weatherData.sunset}
-            windSpeed={weatherData.windSpeed}
-            windDirection={weatherData.windDirection}
-            windGust={weatherData.windGust}
+          <WeatherDetails
             humidity={weatherData.humidity}
-            clouds={weatherData.clouds}
+            pressure={typeof weatherData.pressure === 'number' ? weatherData.pressure : 1013}
+            windSpeed={weatherData.windSpeed}
+            windDirection={typeof weatherData.windDirection === 'number' ? weatherData.windDirection : 0}
+            visibility={typeof weatherData.visibility === 'number' ? weatherData.visibility : 10}
+            sunrise={typeof weatherData.sunrise === 'number' ? weatherData.sunrise : 6.5} 
+            sunset={typeof weatherData.sunset === 'number' ? weatherData.sunset : 19.75}
+            clouds={typeof weatherData.clouds === 'number' ? weatherData.clouds : 0}
+            uvIndex={weatherData.uvIndex}
             rain1h={weatherData.rain1h}
             snow1h={weatherData.snow1h}
-            uvIndex={weatherData.uvIndex}
+            windGust={weatherData.windGust}
+            className="mt-6"
+          />
+        )}
+        
+        {/* Daily Activity Suggestion - Cosa faccio oggi? */}
+        {weatherData && (
+          <DailyActivitySuggestion
+            weatherData={weatherData}
+            className="mt-6"
+            radius={10000}
+          />
+        )}
+        
+        {/* Componente per salvare e visualizzare la cronologia meteo */}
+        {weatherData && (
+          <WeatherHistory
+            currentWeatherData={weatherData}
+            className="mt-6"
           />
         )}
         
@@ -410,6 +427,39 @@ const Home: React.FC = () => {
               <FontAwesomeIcon icon={faChartPie} className="mr-2 text-[var(--color-highlight)]" />
               Analisi Dati e Statistiche
             </h2>
+            
+            {/* Grafico dell'andamento meteo settimanale */}
+            {/* Analisi dei pattern meteorologici */}
+            <WeatherPatternAnalysis
+              weatherData={weatherData}
+              location={weatherData.location}
+              className="mb-4"
+            />
+            
+            {/* Layout a due colonne per i nuovi grafici di correlazione attività e qualità aria */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* Grafico correlazione attività-meteo */}
+              <WeatherActivityCorrelation 
+                weatherData={weatherData}
+                className="col-span-1" 
+              />
+              
+              {/* Grafico trend qualità dell'aria */}
+              <AirQualityTrendChart 
+                lat={weatherData.lat} 
+                lon={weatherData.lon} 
+                currentAqi={{
+                  value: 56,
+                  category: "Buona",
+                  pm25: 23,
+                  pm10: 34,
+                  o3: 45,
+                  no2: 18,
+                  pollen: 15
+                }}
+                className="col-span-1" 
+              />
+            </div>
             
             {/* Grafico dell'andamento meteo settimanale */}
             <WeatherTrendChart 

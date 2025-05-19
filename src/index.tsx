@@ -17,8 +17,8 @@ import '@ionic/react/css/text-transformation.css';
 import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 
-/* Importazioni per Capacitor */
-import { Capacitor } from '@capacitor/core';
+/* Importazioni per servizi nativi */
+import { initCapacitorServices } from './services/capacitorService';
 
 /* Importazioni dell'app */
 import './index.css';
@@ -27,8 +27,13 @@ import reportWebVitals from './reportWebVitals';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import { initializeTheme } from './services/themeService';
 
-// Initialize theme before rendering
+// Initialize theme and native services before rendering
 initializeTheme();
+
+// Inizializza i servizi Capacitor per le funzionalità native
+initCapacitorServices().catch(error => {
+  console.warn('Errore nell\'inizializzazione dei servizi Capacitor:', error);
+});
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement

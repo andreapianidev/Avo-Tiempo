@@ -44,6 +44,23 @@ const MAX_ERROR_LOG_SIZE = 20;
 // Flag per modalità offline
 let isOfflineMode = false;
 
+// Preferenze per le notifiche
+interface NotificationPreferences {
+  offlineMode: boolean;  // Notifiche quando l'app passa in modalità offline/online
+  weatherAlerts: boolean; // Notifiche per nuovi avvisi meteo
+  dataUpdates: boolean;  // Notifiche per aggiornamenti dei dati automatici
+}
+
+// Valori di default per le preferenze di notifica
+const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
+  offlineMode: true,
+  weatherAlerts: true,
+  dataUpdates: false
+};
+
+// Chiave per le preferenze di notifica
+const NOTIFICATION_PREFS_KEY = 'avo_notification_prefs';
+
 /**
  * Verifica la versione dello stato e inizializza il sistema se necessario
  */
@@ -106,8 +123,56 @@ const setupOfflineDetection = (): void => {
 /**
  * Controlla se l'app è offline
  */
-export const isOffline = (): boolean => {
-  return !navigator.onLine;
+export const isOffline = (): boolean => isOfflineMode;
+
+/**
+ * Ottiene le preferenze correnti per le notifiche
+ */
+export const getNotificationPreferences = (): NotificationPreferences => {
+  try {
+    const savedPrefs = localStorage.getItem(NOTIFICATION_PREFS_KEY);
+    if (savedPrefs) {
+      return JSON.parse(savedPrefs) as NotificationPreferences;
+    }
+  } catch (error) {
+    console.error('[APP STATE] Errore nel recupero delle preferenze di notifica:', error);
+  }
+  
+  // Se non ci sono preferenze salvate o c'è un errore, usa i valori predefiniti
+  return DEFAULT_NOTIFICATION_PREFS;
+};
+
+/**
+ * Attiva/disattiva una specifica preferenza di notifica
+ */
+export const toggleNotificationPreference = (key: keyof NotificationPreferences): boolean => {
+  try {
+    const currentPrefs = getNotificationPreferences();
+    currentPrefs[key] = !currentPrefs[key];
+    
+    // Salva le preferenze aggiornate
+    localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(currentPrefs));
+    
+    return currentPrefs[key];
+  } catch (error) {
+    console.error(`[APP STATE] Errore nella modifica della preferenza ${key}:`, error);
+    return false;
+  }
+};
+
+/**
+ * Imposta una specifica preferenza di notifica
+ */
+export const setNotificationPreference = (key: keyof NotificationPreferences, value: boolean): void => {
+  try {
+    const currentPrefs = getNotificationPreferences();
+    currentPrefs[key] = value;
+    
+    // Salva le preferenze aggiornate
+    localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(currentPrefs));
+  } catch (error) {
+    console.error(`[APP STATE] Errore nell'impostazione della preferenza ${key}:`, error);
+  }
 };
 
 /**

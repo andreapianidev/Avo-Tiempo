@@ -1,5 +1,6 @@
 import { logError, ErrorType, createError, ErrorSeverity } from './errorService';
 import { getCacheItem, setCacheItem, clearNamespace, CacheNamespace } from './cacheService';
+import cacheService from './cacheService'; // Importiamo l'intero servizio per accedere alle funzioni non esportate singolarmente
 import { API_KEYS, API_BASE_URLS, fetchWithRetry } from './apiConfigService';
 import { logAppError, isOffline } from './appStateService';
 
@@ -10,6 +11,16 @@ const OVERPASS_API_URL = API_BASE_URLS.OVERPASS[0];
 // Cache keys
 const CACHE_POI_PREFIX = 'poi_cache_';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 ore
+
+// Enum per le categorie POI
+export enum POICategory {
+  TOURISM = 'tourism',
+  NATURAL = 'natural',
+  LEISURE = 'leisure',
+  AMENITY = 'amenity',
+  SHOP = 'shop',
+  ROUTE = 'route'
+}
 
 // Types for OpenStreetMap POIs
 export interface OSMNode {
@@ -419,12 +430,64 @@ const getCachedPOIs = (cacheKey: string): POI[] | null => {
 
 /**
  * Salva i POI nella cache locale
+ * Implementa strategie per evitare di superare la quota di storage
  */
 const cachePOIs = (cacheKey: string, pois: POI[]): void => {
   try {
-    setCacheItem(CacheNamespace.POI, cacheKey, pois, CACHE_DURATION);
+    // Limita il numero massimo di POI in cache a 500 elementi
+    const MAX_CACHED_POIS = 500;
+    // Se abbiamo troppi POI, manteniamo solo quelli più interessanti e vicini
+    let poisToCache = pois;
+    
+    if (pois.length > MAX_CACHED_POIS) {
+      console.log(`[OSM SERVICE] Limitazione POI in cache da ${pois.length} a ${MAX_CACHED_POIS}`);
+      
+      // Priorità 1: POI interessanti
+      const interestingPois = pois.filter(poi => poi.isInteresting);
+      
+      // Priorità 2: Se abbiamo ancora troppi POI interessanti, li ordiniamo per distanza
+      const sortedPois = interestingPois
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, MAX_CACHED_POIS);
+      
+      // Se non abbiamo abbastanza POI interessanti, aggiungiamo altri POI ordinati per distanza
+      if (sortedPois.length < MAX_CACHED_POIS) {
+        const remainingPois = pois
+          .filter(poi => !poi.isInteresting)
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, MAX_CACHED_POIS - sortedPois.length);
+        
+        poisToCache = [...sortedPois, ...remainingPois];
+      } else {
+        poisToCache = sortedPois;
+      }
+    }
+    
+    // Prima di salvare, verifichiamo se ci sono altre cache di POI e ne rimuoviamo alcune se necessario
+    try {
+      // Se abbiamo più di 3 cache di POI, rimuoviamo quella più vecchia
+      const allPOIKeys = cacheService.getAllNamespaceKeys(CacheNamespace.POI);
+      if (allPOIKeys.length > 3) {
+        // Otteniamo l'età di ciascuna cache e rimuoviamo quella più vecchia
+        const oldestKey = allPOIKeys.reduce((oldest: string, current: string) => {
+          const ageOldest = cacheService.getCacheItemAge(CacheNamespace.POI, oldest) || 0;
+          const ageCurrent = cacheService.getCacheItemAge(CacheNamespace.POI, current) || 0;
+          return ageCurrent > ageOldest ? current : oldest;
+        }, allPOIKeys[0]);
+        
+        if (oldestKey) {
+          console.log(`[OSM SERVICE] Rimozione cache POI più vecchia: ${oldestKey}`);
+          cacheService.removeCacheItem(CacheNamespace.POI, oldestKey);
+        }
+      }
+    } catch (e) {
+      console.error('[OSM SERVICE] Errore nella pulizia della cache:', e);
+    }
+    
+    // Ora salviamo i POI filtrati in cache
+    setCacheItem(CacheNamespace.POI, cacheKey, poisToCache, CACHE_DURATION);
   } catch (error) {
-    console.error('Error caching POIs:', error);
+    console.error('[OSM SERVICE] Error caching POIs:', error);
   }
 };
 
@@ -1285,6 +1348,83 @@ const getNearbyHikingTrails = async (lat: number, lon: number, radius: number = 
 };
 
 /**
+ * Trova POI vicini alla posizione specificata in base alla categoria e al termine di ricerca
+ * @param lat Latitudine del centro della ricerca
+ * @param lon Longitudine del centro della ricerca
+ * @param category Categoria di POI da cercare
+ * @param radius Raggio di ricerca in metri
+ * @param searchTerm Termine di ricerca opzionale
+ * @returns Promise contenente un array di POI
+ */
+export const findNearbyPOIs = async (
+  lat: number,
+  lon: number,
+  category: POICategory,
+  radius: number = 5000,
+  searchTerm?: string
+): Promise<POI[]> => {
+  try {
+    // Crea filtri in base alla categoria
+    let filters: string[] = [];
+    
+    switch (category) {
+      case POICategory.TOURISM:
+        filters.push('node["tourism"]');
+        if (searchTerm) {
+          filters = [`node["tourism"="${searchTerm}"]`];
+        }
+        break;
+      case POICategory.NATURAL:
+        filters.push('node["natural"]');
+        if (searchTerm) {
+          filters = [`node["natural"="${searchTerm}"]`];
+        }
+        break;
+      case POICategory.LEISURE:
+        filters.push('node["leisure"]', 'way["leisure"]');
+        if (searchTerm) {
+          filters = [`node["leisure"="${searchTerm}"]`, `way["leisure"="${searchTerm}"]`];
+        }
+        break;
+      case POICategory.AMENITY:
+        filters.push('node["amenity"]');
+        if (searchTerm) {
+          filters = [`node["amenity"="${searchTerm}"]`];
+        }
+        break;
+      case POICategory.SHOP:
+        filters.push('node["shop"]');
+        if (searchTerm) {
+          filters = [`node["shop"="${searchTerm}"]`];
+        }
+        break;
+      case POICategory.ROUTE:
+        filters.push('relation["route"]');
+        if (searchTerm) {
+          filters = [`relation["route"="${searchTerm}"]`];
+        }
+        break;
+    }
+    
+    // Se abbiamo un termine di ricerca più generale, proviamo anche con il nome
+    if (searchTerm && searchTerm.length > 2) {
+      filters.push(`node["name"~"${searchTerm}",i]`);
+    }
+    
+    // Ottieni i POI con i filtri creati
+    const pois = await getPOIs(lat, lon, radius, filters);
+    
+    // Filtra POI senza nome e ordina per distanza
+    return pois
+      .filter(poi => poi.name && poi.name.trim() !== '')
+      .sort((a, b) => a.distance - b.distance);
+  } catch (error) {
+    console.error('Errore nel recupero dei POI:', error);
+    return [];
+  }
+};
+
+/**
  * Esportiamo le funzioni del servizio OpenStreetMap
  */
 export const osmService = {
@@ -1295,6 +1435,7 @@ export const osmService = {
   getNearbyFoodAndDrink,
   getNearbyHikingTrails,
   calculateDistance,
+  findNearbyPOIs,
   // Esponiamo la funzione per svuotare la cache in caso di problemi
   clearCache: () => {
     return clearNamespace(CacheNamespace.POI);

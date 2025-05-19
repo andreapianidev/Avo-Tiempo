@@ -1,6 +1,12 @@
 import { handleApiError, handleNetworkError, ErrorType, createError, logError } from './errorService';
 import { getCurrentCity } from './geolocationService';
 import { getCachedTrendsData, cacheTrendsData, canMakeApiCall, getCurrentLocation } from './appStateService';
+import { redact, logInfo, logWarning, logError as logErrorUtil } from '../utils/logger';
+// --- patch: importa la API_KEY dal servizio centralizzato
+import { API_KEYS } from './apiConfigService';
+
+// --- patch: mappa per tenere traccia delle richieste in corso
+const pendingRequests: Map<string, Promise<WeatherTrend[]>> = new Map();
 
 export interface WeatherTrend {
   day: string;
@@ -27,7 +33,7 @@ export interface TrendSummary {
   rainDays: number;
 }
 
-const API_KEY = 'b33c9835879f888134e97c6d58d6e4a7';
+const API_KEY = API_KEYS.OPENWEATHER; // Utilizza la chiave centralizzata
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 // Valore di fallback per la posizione
 const FALLBACK_LOCATION = 'El Paso';
@@ -56,6 +62,30 @@ const formatDay = (timestamp: number): string => {
   return date.toLocaleDateString('es-ES', { weekday: 'short' });
 };
 
+/**
+ * Group forecast data by day timestamp (start of day)
+ * @param forecastList The list of forecast data points from API
+ * @returns Object with day start timestamp as key and array of forecast items as value
+ */
+// --- patch: aggiunta funzione helper per raggruppare i dati per giorno
+const groupForecastByDay = (forecastList: any[]): Record<string, any[]> => {
+  const dailyForecasts: Record<string, any[]> = {};
+  
+  forecastList.forEach((item: any) => {
+    // Get start of day timestamp
+    const date = new Date(item.dt * 1000);
+    date.setHours(0, 0, 0, 0);
+    const dayTimestamp = Math.floor(date.getTime() / 1000).toString();
+    
+    if (!dailyForecasts[dayTimestamp]) {
+      dailyForecasts[dayTimestamp] = [];
+    }
+    dailyForecasts[dayTimestamp].push(item);
+  });
+  
+  return dailyForecasts;
+};
+
 
 
 /**
@@ -82,37 +112,66 @@ export const getActiveLocation = async (): Promise<string> => {
  * Fetch 7-day weather forecast for a location
  * Utilizza il sistema centralizzato di cache e limitazione API
  */
-export const fetchWeeklyTrend = async (city?: string): Promise<WeatherTrend[]> => {
+export const fetchWeeklyTrend = async (city?: string, countryCode?: string): Promise<WeatherTrend[]> => {
   // Se non viene specificata una città, usa la posizione corrente dell'utente
   if (!city) {
     city = getCurrentLocation();
     if (!city) {
-      console.log('[TREND SERVICE] Nessuna posizione attiva, usando fallback');
+      logInfo('TREND', 'Nessuna posizione attiva, usando fallback');
       city = FALLBACK_LOCATION;
     }
   }
   
-  console.log(`[TREND SERVICE] Richiesta tendenze per ${city}`);
+  // --- patch: creiamo una chiave unica per la richiesta
+  const requestKey = `trend_${city.toLowerCase()}_${countryCode || ''}`;
+  
+  // --- patch: controlla se è già in corso una richiesta per questa città
+  if (pendingRequests.has(requestKey)) {
+    logInfo('TREND', `Riutilizzo richiesta esistente per ${city}`);
+    return pendingRequests.get(requestKey)!;
+  }
+  
+  logInfo('TREND', `Richiesta tendenze per ${city}`);
   
   // Verifica se abbiamo dati in cache validi
   const cachedData = getCachedTrendsData(city);
   if (cachedData) {
-    console.log(`[TREND SERVICE] Usando dati in cache per ${city}`);
+    logInfo('TREND', `Usando dati in cache per ${city}`);
     return cachedData;
   }
   
   // Verifica se è possibile effettuare una chiamata API
   if (!canMakeApiCall()) {
-    console.log(`[TREND SERVICE] Limite API raggiunto, usando dati fallback per ${city}`);
+    logInfo('TREND', `Limite API raggiunto, usando dati fallback per ${city}`);
     return getMockWeeklyTrend();
   }
   
   try {
-    console.log(`[TREND SERVICE] Esecuzione chiamata API per ${city}`);
+    // --- patch: crea una promise per questa richiesta e tracciala nella mappa
+    const trendPromise = fetchTrendData(city, countryCode);
+    pendingRequests.set(requestKey, trendPromise);
+    
+    const result = await trendPromise;
+    return result;
+  } catch (error) {
+    logErrorUtil('TREND', `Errore nel recupero tendenze: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  } finally {
+    // Rimuovi la richiesta pendente dalla mappa dopo che è completata
+    pendingRequests.delete(requestKey);
+  }
+};
+
+/**
+ * Implementazione interna per il recupero dei dati tendenze
+ */
+const fetchTrendData = async (city: string, countryCode?: string): Promise<WeatherTrend[]> => {
+  try {
+    logInfo('TREND', `Esecuzione chiamata API per ${city}`);
     
     // Get 5-day forecast from OpenWeather API
     const forecastUrl = `${BASE_URL}/forecast?q=${city}&units=metric&appid=${API_KEY}`;
-    console.log(`[TREND SERVICE] Chiamata forecast API: ${forecastUrl}`);
+    logInfo('TREND', `Chiamata forecast API: ${redact(forecastUrl)}`);
     
     const forecastResponse = await fetch(forecastUrl);
     
@@ -121,37 +180,28 @@ export const fetchWeeklyTrend = async (city?: string): Promise<WeatherTrend[]> =
       console.error(`[TREND SERVICE] Errore API: ${forecastResponse.status}`);
       throw createError(
         ErrorType.API, 
-        `Failed to fetch forecast: ${forecastResponse.status}`, 
-        errorText
+        `Forecast API error: ${forecastResponse.status}`, 
+        new Error(forecastResponse.statusText)
       );
     }
     
     const forecastData = await forecastResponse.json();
     
-    // Group forecast data by day
-    const dailyForecasts: { [key: string]: any[] } = {};
+    // Raggruppa i dati per giorno
+    const dailyData = groupForecastByDay(forecastData.list);
     
-    forecastData.list.forEach((item: any) => {
-      const day = formatDay(item.dt);
-      if (!dailyForecasts[day]) {
-        dailyForecasts[day] = [];
-      }
-      dailyForecasts[day].push(item);
-    });
-    
-    // Process each day's data
-    const weeklyTrend: WeatherTrend[] = Object.keys(dailyForecasts).map(day => {
-      const dayData = dailyForecasts[day];
+    // Crea oggetti WeatherTrend per ogni giorno
+    const weeklyTrend = Object.entries(dailyData).map(([timestamp, dayData]: [string, any[]]) => {
+      const day = formatDay(parseInt(timestamp));
       
-      // Find max and min temperatures
-      const temperatures = dayData.map((item: any) => item.main.temp);
-      const maxTemp = Math.round(Math.max(...temperatures));
-      const minTemp = Math.round(Math.min(...temperatures));
+      // Calculate max and min temperatures
+      const maxTemp = Math.round(Math.max(...dayData.map((item: any) => item.main.temp)));
+      const minTemp = Math.round(Math.min(...dayData.map((item: any) => item.main.temp)));
       
-      // Determine dominant weather condition
-      const conditions = dayData.map((item: any) => mapWeatherCondition(item.weather[0].id));
+      // Determine dominant condition
       const conditionCounts: { [key: string]: number } = {};
-      conditions.forEach(condition => {
+      dayData.forEach((item: any) => {
+        const condition = mapWeatherCondition(item.weather[0].id);
         conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
       });
       
@@ -159,7 +209,7 @@ export const fetchWeeklyTrend = async (city?: string): Promise<WeatherTrend[]> =
         (a, b) => conditionCounts[a] > conditionCounts[b] ? a : b
       );
       
-      // Determine precipitation probability
+      // Calculate average precipitation probability
       const precipTotal = dayData.reduce((total: number, item: any) => {
         return total + (item.pop || 0);
       }, 0);
@@ -177,7 +227,7 @@ export const fetchWeeklyTrend = async (city?: string): Promise<WeatherTrend[]> =
     // Salva i dati in cache persistente
     cacheTrendsData(weeklyTrend, city);
     
-    console.log(`[TREND SERVICE] Dati salvati in cache per ${city}`);
+    logInfo('TREND', `Dati salvati in cache per ${city}`);
     return weeklyTrend;
   } catch (error: any) {
     if (error.type === ErrorType.API) {
@@ -191,7 +241,7 @@ export const fetchWeeklyTrend = async (city?: string): Promise<WeatherTrend[]> =
     // In caso di errore, verifica se ci sono dati in cache (anche scaduti)
     const cachedData = getCachedTrendsData(city);
     if (cachedData) {
-      console.log(`[TREND SERVICE] Errore API, usando cache come fallback per ${city}`);
+      logWarning('TREND', `Errore API, usando cache come fallback per ${city}`);
       return cachedData;
     }
     

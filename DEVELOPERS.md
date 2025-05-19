@@ -4,7 +4,7 @@
 
 AVO Weather è un'applicazione meteo progressive web app (PWA) progettata per fornire previsioni meteo per le Isole Canarie e altre località. L'app è costruita con React, TypeScript e TailwindCSS, e utilizza l'API OpenWeather per i dati meteorologici, con funzionalità AI avanzate tramite DeepSeek API.
 
-## Struttura del Progetto
+### Struttura del Progetto
 
 ```
 /Avo Tiempo
@@ -25,6 +25,7 @@ AVO Weather è un'applicazione meteo progressive web app (PWA) progettata per fo
 │   ├── components/          # Componenti React riutilizzabili
 │   │   ├── AIInsight.tsx    # Visualizzazione degli insight AI
 │   │   ├── AlertBox.tsx     # Componente per gli avvisi meteo
+│   │   ├── DailyActivitySuggestion.tsx # Suggerimenti personalizzati attività giornaliere
 │   │   ├── CategoryPOIRecommendations.tsx # Raccomandazioni POI per categoria
 │   │   ├── ErrorFeedback.tsx # Gestione e visualizzazione errori
 │   │   ├── ExternalLink.tsx  # Componente per link esterni
@@ -48,7 +49,7 @@ AVO Weather è un'applicazione meteo progressive web app (PWA) progettata per fo
 │   │
 │   ├── services/            # Servizi e API
 │   │   ├── aemetService.ts   # Integrazione con AEMET (allerte meteo)
-│   │   ├── aiService.ts      # Servizio per generazione insight AI
+│   │   ├── aiService.ts      # Servizio per generazione insight AI e suggerimenti attività
 │   │   ├── appStateService.ts # Gestione stato globale dell'app
 │   │   ├── cacheService.ts   # Gestione della cache
 │   │   ├── connectivityService.ts # Gestione stato connessione
@@ -68,7 +69,7 @@ AVO Weather è un'applicazione meteo progressive web app (PWA) progettata per fo
 │   │   └── poi.ts           # Tipi per punti di interesse
 │   │
 │   ├── utils/               # Utilità e funzioni helper
-│   │   ├── dateUtils.ts     # Funzioni per manipolazione date
+│   │   ├── dateUtils.ts     # Funzioni per manipolazione date e calcolo momento della giornata
 │   │   ├── formatUtils.ts   # Formattazione dati (temperatura, ecc.)
 │   │   └── storageUtils.ts  # Utility per localStorage
 │   │
@@ -119,16 +120,22 @@ AVO Weather è un'applicazione meteo progressive web app (PWA) progettata per fo
 ### Servizi Core
 
 #### aiService.ts
-Gestisce l'integrazione con l'API DeepSeek per generare insight personalizzati sul meteo. Caratteristiche:
-- Caching dei risultati per 15 minuti
+Servizio per integrazione con DeepSeek API:
+- Generazione di insight basati su meteo
+- Generazione di suggerimenti attività personalizzati basati su meteo, ora e POI
+- Caching per ridurre le chiamate API
 - Supporto per streaming delle risposte
-- Gestione delle richieste pendenti per evitare chiamate duplicate
+- Sistema di fallback locale quando l'API non è disponibile
+- Template di risposta preformattati
+- Funzione `generateDailyActivitySuggestion` per suggerimenti attività contestuali
+- Risposta in formato JSON strutturato con titolo, descrizione e POI suggeritie duplicate
 - Fallback locale in caso di errori API
 - Generazione di prompt dinamici basati su:
   - Condizioni meteo
   - Temperatura
   - Allerte attive
   - POI nelle vicinanze
+  - Preferenze utente
 
 #### weatherService.ts
 Integrazione con OpenWeather API:
@@ -177,6 +184,13 @@ Visualizzazione degli insight generati dall'AI:
 - Animazioni di caricamento
 - Fallback per modalità offline
 
+#### DailyActivitySuggestion.tsx
+Componente per suggerimenti attività giornaliere:
+- Suggerimenti personalizzati basati su meteo, ora e POI
+- Visualizzazione di attività consigliate per il momento della giornata
+- Integrazione con insight AI per contestualizzare le attività
+- Gestione errori con componente ErrorFeedback
+
 ## Flussi di Dati Principali
 
 ### Flusso Meteo
@@ -220,9 +234,12 @@ Il progetto implementa diverse strategie di caching per migliorare performance e
 
 ### Cache POI
 - **Durata**: 24 ore
+
+### Cache Suggerimenti Attività Giornaliere
+- **Durata**: 60 minuti
 - **Implementazione**: LocalStorage via `cacheService.ts`
-- **Namespace**: `poi_data`
-- **Invalidazione**: Basata su distanza (se l'utente si sposta significativamente)
+- **Namespace**: `ai_insights` con prefisso `daily_activity_`
+- **Chiave**: Combinazione di località, condizioni meteo, momento della giornata e tipo di giorno (weekend/feriale)
 
 ## Servizi e API Esterne
 
@@ -275,6 +292,7 @@ Il progetto implementa diverse strategie di caching per migliorare performance e
 #### Componenti Principali
 - `WeatherBox.tsx`: Visualizzazione principale dei dati meteo
 - `AlertBox.tsx`: Visualizzazione delle allerte meteo con livelli di gravità
+- `DailyActivitySuggestion.tsx`: Suggerimenti attività giornaliere basate su meteo, orario e POI vicini
 - `LocationPOIRecommendations.tsx`: Componente che integra dati meteo, POI e insight AI
 - `CategoryPOIRecommendations.tsx`: Visualizzazione POI filtrati per categoria
 - `POIMap.tsx`: Mappa interattiva con POI
@@ -337,7 +355,7 @@ L'integrazione con DeepSeek AI è un elemento chiave del progetto:
 - Prompt dinamici generati in base al contesto
 - Stile "canaro" (umoristico e localizzato)
 - Inclusione di informazioni contestuali:
-  - Condizioni meteo attuali
+  - Condizioni meteo
   - Temperatura
   - Allerte attive
   - POI nelle vicinanze

@@ -81,7 +81,48 @@ const POIDensityMap: React.FC<POIDensityMapProps> = ({ lat, lon, radius, classNa
     fetchPOIs();
   }, [lat, lon, radius, cacheKey]);
 
+  // Dati fittizi per quando non ci sono dati reali disponibili
+  const getMockDirectionData = (): Record<string, number> => {
+    return {
+      'Nord': 22,
+      'Nord-Est': 18,
+      'Est': 30,
+      'Sud-Est': 25,
+      'Sud': 16,
+      'Sud-Ovest': 12,
+      'Ovest': 24,
+      'Nord-Ovest': 20
+    };
+  };
+
   const prepareChartData = () => {
+    // Se non ci sono POI, usa dati fittizi
+    if (pois.length === 0) {
+      const mockData = getMockDirectionData();
+      
+      // Prepara le direzioni come etichette
+      const directions = Object.keys(mockData);
+      
+      return {
+        labels: directions,
+        datasets: [
+          {
+            label: 'Densità POI (simulazione)',
+            data: Object.values(mockData),
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1,
+            fill: true,
+            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgba(255, 99, 132, 1)',
+          },
+        ],
+      };
+    }
+    
+    // Altrimenti usa i dati reali
     // Calcola la densità dei POI per direzione
     const densityData = calculatePOIDensityByDirection(pois, lat, lon);
     
@@ -147,12 +188,6 @@ const POIDensityMap: React.FC<POIDensityMapProps> = ({ lat, lon, radius, classNa
         ) : error ? (
           <div className="absolute inset-0 flex items-center justify-center text-center">
             <p className="text-sm text-[var(--color-text-secondary)]">{error}</p>
-          </div>
-        ) : pois.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-center">
-            <p className="text-sm text-[var(--color-text-secondary)]">
-              Nessun punto di interesse trovato in questa zona
-            </p>
           </div>
         ) : (
           <Radar data={prepareChartData()} options={chartOptions} />

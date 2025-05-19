@@ -5,16 +5,21 @@ import {
   faRotate, faExclamationTriangle, faWater, faCloud, faSun, 
   faLocationDot, faMapMarkerAlt, faChartLine, faChartBar, 
   faTemperatureHigh, faUmbrella, faWind, faCalendarAlt, 
-  faInfoCircle, faHistory, faExchangeAlt, faLeaf, faShieldAlt
+  faInfoCircle, faHistory, faExchangeAlt, faLeaf, faShieldAlt,
+  faHiking, faPersonSwimming, faBiking, faRunning
 } from '@fortawesome/free-solid-svg-icons';
 import AIInsight from '../components/AIInsight';
 import WeatherCharts from '../components/WeatherCharts';
 import AirQualityAndActivities from '../components/AirQualityAndActivities';
+import ClimatePatternIndicator from '../components/ClimatePatternIndicator';
+import SimilarLocationsComparison from '../components/SimilarLocationsComparison';
+import OutdoorActivityIndicator from '../components/OutdoorActivityIndicator';
 import { fetchWeeklyTrend, generateTrendSummary, WeatherTrend, getActiveLocation } from '../services/trendService';
 import { setCurrentLocation, getCurrentLocation, listenToLocationChanges } from '../services/appStateService';
 import { getAIInsight } from '../services/aiService';
 import { getUserSettings, convertTemperature, getTemperatureUnit } from '../services/settingsService';
 import { createError, ErrorType, AppError, getUserFriendlyErrorMessage } from '../services/errorService';
+import { analyzeWeatherPatterns } from '../services/weatherPatternsService';
 
 const Trends: React.FC = () => {
   const [trendData, setTrendData] = useState<WeatherTrend[]>([]);
@@ -35,6 +40,98 @@ const Trends: React.FC = () => {
   const [showHistoricalComparison, setShowHistoricalComparison] = useState<boolean>(false);
   const [timeRange, setTimeRange] = useState<'week' | 'month'>('week');
   const [showQuickStats, setShowQuickStats] = useState<boolean>(true);
+  
+  // Nuovi stati per i componenti aggiunti
+  const [showClimatePattern, setShowClimatePattern] = useState<boolean>(true);
+  const [showSimilarLocations, setShowSimilarLocations] = useState<boolean>(true);
+  const [showActivityIndicator, setShowActivityIndicator] = useState<boolean>(true);
+  const [patternAnalysis, setPatternAnalysis] = useState<any>(null);
+  
+  // Dati demo per località simili
+  const [similarLocations, setSimilarLocations] = useState([
+    { 
+      name: 'Santa Fe', 
+      temperature: 26, 
+      precipitation: 3, 
+      windSpeed: 12, 
+      condition: 'clear', 
+      distance: 386, 
+      similarityScore: 86 
+    },
+    { 
+      name: 'Albuquerque', 
+      temperature: 28, 
+      precipitation: 5, 
+      windSpeed: 14, 
+      condition: 'partly cloudy', 
+      distance: 268, 
+      similarityScore: 79 
+    },
+    { 
+      name: 'Las Cruces', 
+      temperature: 27, 
+      precipitation: 2, 
+      windSpeed: 11, 
+      condition: 'clear', 
+      distance: 74, 
+      similarityScore: 92 
+    },
+    { 
+      name: 'Ciudad Juárez', 
+      temperature: 26, 
+      precipitation: 0, 
+      windSpeed: 13, 
+      condition: 'clear', 
+      distance: 12, 
+      similarityScore: 95 
+    }
+  ]);
+  
+  // Dati demo per attività all'aperto
+  const [outdoorActivities, setOutdoorActivities] = useState([
+    { 
+      name: 'Escursionismo', 
+      icon: faHiking, 
+      score: 85, 
+      recommendation: 'Ideale per escursioni in montagna', 
+      timeOfDay: 'morning' as const
+    },
+    { 
+      name: 'Nuoto', 
+      icon: faPersonSwimming, 
+      score: 68, 
+      recommendation: 'Buone condizioni ma proteggersi dal sole', 
+      timeOfDay: 'afternoon' as const
+    },
+    { 
+      name: 'Ciclismo', 
+      icon: faBiking, 
+      score: 75, 
+      recommendation: 'Ottime condizioni, vento moderato', 
+      timeOfDay: 'all' as const
+    },
+    { 
+      name: 'Corsa', 
+      icon: faRunning, 
+      score: 60, 
+      recommendation: 'Meglio nelle ore più fresche', 
+      timeOfDay: 'morning' as const
+    },
+    { 
+      name: 'Tennis', 
+      icon: faRunning, 
+      score: 65, 
+      recommendation: 'Condizioni accettabili, attenzione al vento', 
+      timeOfDay: 'evening' as const
+    },
+    { 
+      name: 'Golf', 
+      icon: faHiking, 
+      score: 72, 
+      recommendation: 'Buone condizioni, leggera brezza', 
+      timeOfDay: 'all' as const
+    }
+  ]);
 
   // Get user settings for temperature units
   const { units } = getUserSettings();
@@ -46,6 +143,35 @@ const Trends: React.FC = () => {
   useEffect(() => {
     locationRef.current = currentLocation;
   }, [currentLocation]);
+  
+  // Carica l'analisi dei pattern quando cambiano i dati trend
+  useEffect(() => {
+    const loadPatternAnalysis = async () => {
+      if (trendData.length > 0) {
+        try {
+          // Creiamo un oggetto completo per l'analisi
+          const weatherData = {
+            location: currentLocation,
+            temperature: trendData[0]?.maxTemp || 25,
+            feelsLike: trendData[0]?.maxTemp || 25, // usiamo maxTemp come approssimazione per feelsLike
+            humidity: 50, // valore di default
+            windSpeed: trendData[0]?.windSpeed || 10,
+            condition: trendData[0]?.condition || 'clear',
+            lat: 0, // placeholder
+            lon: 0, // placeholder
+            hourlyForecast: [] // placeholder
+          };
+          
+          const analysis = await analyzeWeatherPatterns(weatherData, currentLocation);
+          setPatternAnalysis(analysis);
+        } catch (e) {
+          console.error('Errore nell\'analisi dei pattern:', e);
+        }
+      }
+    };
+    
+    loadPatternAnalysis();
+  }, [trendData, currentLocation]);
 
   // Definiamo le funzioni principali
   const loadTrendData = useCallback(async (refresh = false) => {
@@ -545,6 +671,46 @@ const Trends: React.FC = () => {
             Il clima di {currentLocation} sta mostrando un trend di riscaldamento con temperature superiori alla media.  
           </p>
         </div>
+      )}
+      
+      {/* Nuovi componenti aggiunti */}
+      {showClimatePattern && patternAnalysis && (
+        <ClimatePatternIndicator 
+          location={currentLocation}
+          currentPattern={patternAnalysis.pattern || 'Soleggiato con lievi variazioni'}
+          normalPattern={patternAnalysis.description || 'Soleggiato con temperature moderate'}
+          deviation={7}
+          confidence={patternAnalysis.confidence || 85}
+          season={new Date().getMonth() >= 3 && new Date().getMonth() < 6 ? 'spring' : 
+                 new Date().getMonth() >= 6 && new Date().getMonth() < 9 ? 'summer' : 
+                 new Date().getMonth() >= 9 && new Date().getMonth() < 12 ? 'autumn' : 'winter'}
+          className="mb-4"
+        />
+      )}
+      
+      {showSimilarLocations && (
+        <SimilarLocationsComparison
+          currentLocation={currentLocation}
+          currentTemperature={trendData.length > 0 ? trendData[0].maxTemp : 25}
+          currentPrecipitation={trendData.length > 0 ? trendData[0].precipitation : 0}
+          currentWindSpeed={trendData.length > 0 ? trendData[0].windSpeed || 10 : 10}
+          similarLocations={similarLocations}
+          units={units as 'metric' | 'imperial'}
+          className="mb-4"
+        />
+      )}
+      
+      {showActivityIndicator && (
+        <OutdoorActivityIndicator
+          location={currentLocation}
+          weatherCondition={trendData.length > 0 ? trendData[0].condition : 'clear'}
+          temperature={trendData.length > 0 ? trendData[0].maxTemp : 25}
+          humidity={60} // valore di default
+          windSpeed={trendData.length > 0 ? trendData[0].windSpeed || 10 : 10}
+          uvIndex={trendData.length > 0 ? trendData[0].uvIndex || 5 : 5}
+          activities={outdoorActivities}
+          className="mb-4"
+        />
       )}
       </div>
     </div>

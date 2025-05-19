@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunkavoweather=self.webpackChunkavoweather||[]).push([[339],{3339:(a,e,d)=>{d.d(e,{LocalNotifications:()=>o});var n,t=d(5403);!function(a){a[a.Sunday=1]="Sunday",a[a.Monday=2]="Monday",a[a.Tuesday=3]="Tuesday",a[a.Wednesday=4]="Wednesday",a[a.Thursday=5]="Thursday",a[a.Friday=6]="Friday",a[a.Saturday=7]="Saturday"}(n||(n={}));const o=(0,t.F3)("LocalNotifications",{web:()=>d.e(640).then(d.bind(d,8640)).then((a=>new a.LocalNotificationsWeb))})}}]);
+//# sourceMappingURL=339.02e32d95.chunk.js.map

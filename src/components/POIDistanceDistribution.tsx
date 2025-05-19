@@ -76,10 +76,19 @@ const POIDistanceDistribution: React.FC<POIDistanceDistributionProps> = ({ lat, 
     fetchPOIs();
   }, [lat, lon, radius]);
 
+  // Dati fittizi per quando non ci sono dati reali disponibili
+  const getMockDistanceData = (): Record<string, number> => {
+    return {
+      '0-500m': 25,
+      '500m-1km': 18,
+      '1km-2km': 32,
+      '2km-5km': 45,
+      '5km-10km': 28,
+      '10km+': 14
+    };
+  };
+
   const prepareChartData = () => {
-    // Raggruppa i POI per fascia di distanza
-    const distanceRanges = groupPOIsByDistanceRange(pois);
-    
     // Colori per le barre
     const barColors = [
       'rgba(54, 162, 235, 0.7)',  // Blu
@@ -89,6 +98,31 @@ const POIDistanceDistribution: React.FC<POIDistanceDistributionProps> = ({ lat, 
       'rgba(255, 99, 132, 0.7)',  // Rosa
       'rgba(153, 102, 255, 0.7)', // Viola
     ];
+    
+    // Se non ci sono POI, usa dati fittizi
+    if (pois.length === 0) {
+      const mockData = getMockDistanceData();
+      
+      return {
+        labels: Object.keys(mockData),
+        datasets: [
+          {
+            label: 'Numero di POI (simulazione)',
+            data: Object.values(mockData),
+            backgroundColor: barColors,
+            borderColor: barColors.map(color => color.replace('0.7', '1')),
+            borderWidth: 1,
+            borderRadius: 5,
+            barPercentage: 0.8,
+            categoryPercentage: 0.9,
+          },
+        ],
+      };
+    }
+    
+    // Altrimenti usa i dati reali
+    // Raggruppa i POI per fascia di distanza
+    const distanceRanges = groupPOIsByDistanceRange(pois);
     
     return {
       labels: Object.keys(distanceRanges),
@@ -153,25 +187,28 @@ const POIDistanceDistribution: React.FC<POIDistanceDistributionProps> = ({ lat, 
           <div className="absolute inset-0 flex items-center justify-center">
             <FontAwesomeIcon icon={faSpinner} spin className="text-3xl text-[var(--color-highlight)]" />
           </div>
-        ) : error ? (
-          <div className="absolute inset-0 flex items-center justify-center text-center">
-            <p className="text-sm text-[var(--color-text-secondary)]">{error}</p>
-          </div>
-        ) : pois.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-center">
-            <p className="text-sm text-[var(--color-text-secondary)]">
-              Nessun punto di interesse trovato in questa zona
-            </p>
-          </div>
         ) : (
-          <Bar data={prepareChartData()} options={chartOptions} />
+          <>
+            <Bar data={prepareChartData()} options={chartOptions} />
+            {error && (
+              <div className="absolute bottom-0 left-0 right-0 bg-yellow-50 rounded-b-lg p-2 text-center">
+                <p className="text-xs text-amber-600">
+                  <small>⚠️ Dati simulati: {error}</small>
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
       
-      {lastUpdated && !isLoading && !error && pois.length > 0 && (
+      {!isLoading && (error || pois.length > 0) && (
         <div className="mt-2 text-right">
           <p className="text-xs text-[var(--color-text-secondary)]">
-            Basato su {pois.length} POI · Aggiornato: {lastUpdated.toLocaleTimeString('it-IT')}
+            {error ? (
+              <>Dati simulati · {new Date().toLocaleTimeString('it-IT')}</>
+            ) : (
+              <>Basato su {pois.length} POI · Aggiornato: {lastUpdated?.toLocaleTimeString('it-IT') || new Date().toLocaleTimeString('it-IT')}</>
+            )}
           </p>
         </div>
       )}

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSun, faThermometer, faLocationDot, faGear } from '@fortawesome/free-solid-svg-icons';
+import { faSun, faThermometer, faLocationDot, faGear, faHiking } from '@fortawesome/free-solid-svg-icons';
 
 const FooterNav: React.FC = () => {
   const location = useLocation();
@@ -26,6 +26,11 @@ const FooterNav: React.FC = () => {
         <Link to="/trends" className={`flex flex-col items-center ${isActive('/trends')}`}>
           <FontAwesomeIcon icon={faThermometer} className="text-2xl" />
           <span className="text-xs mt-1">Tendencias</span>
+        </Link>
+
+        <Link to="/activities" className={`flex flex-col items-center ${isActive('/activities')}`}>
+          <FontAwesomeIcon icon={faHiking} className="text-2xl" />
+          <span className="text-xs mt-1">Attività</span>
         </Link>
         
         <Link to="/settings" className={`flex flex-col items-center ${isActive('/settings')}`}>
