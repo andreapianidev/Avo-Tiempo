@@ -1,15 +1,54 @@
 // Weather service to handle API calls to OpenWeather API
-import { getCachedWeatherData, cacheWeatherData, canMakeApiCall, getCurrentLocation, logAppError, isOffline } from './appStateService';
+import { canMakeApiCall, getCurrentLocation, getCurrentCoordinates, logAppError, isOffline } from './appStateService';
 import { createError, ErrorType } from './errorService';
+import { getCacheItem, setCacheItem, CacheNamespace } from './cacheService';
+import { calculateDistance } from './osmService';
+import { API_KEYS, API_BASE_URLS, fetchWithRetry } from './apiConfigService';
 
-const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || 'b33c9835879f888134e97c6d58d6e4a7';
-const BASE_URL = 'https://api.openweathermap.org/data/2.5';
+// Utilizziamo il servizio centralizzato per la configurazione API
+const API_KEY = API_KEYS.OPENWEATHER;
+const BASE_URL = API_BASE_URLS.OPENWEATHER_CURRENT;
 
+const WEATHER_CACHE_TTL = 20 * 60 * 1000; // 20 minutes in milliseconds
+const SIGNIFICANT_DISTANCE_KM = 10; // 10 km
 
+// Formato dell'interfaccia dei dati meteo
+export interface WeatherData {
+  location: string;
+  temperature: number;
+  feelsLike: number;
+  humidity: number;
+  windSpeed: number;
+  condition: string;
+  alert?: string;
+  lat: number;  // Latitude for map and POI features
+  lon: number;  // Longitude for map and POI features
+  pressure?: number;
+  visibility?: number;
+  sunrise?: number;
+  sunset?: number;
+  windDirection?: number;
+  windGust?: number;
+  clouds?: number;
+  uvIndex?: number;
+  rain1h?: number;
+  snow1h?: number;
+  hourlyForecast: {
+    time: string;
+    temperature: number;
+    condition: string;
+  }[];
+}
+
+interface WeatherCacheEntry {
+  data: WeatherData;
+  timestamp: number;
+  latitude: number;
+  longitude: number;
+}
 
 // Convert OpenWeather condition codes to our simplified conditions
 const mapWeatherCondition = (conditionCode: number): string => {
-  // Weather condition codes: https://openweathermap.org/weather-conditions
   if (conditionCode >= 200 && conditionCode < 300) return 'thunderstorm';
   if (conditionCode >= 300 && conditionCode < 400) return 'drizzle';
   if (conditionCode >= 500 && conditionCode < 600) return 'rain';
@@ -26,166 +65,121 @@ const formatTime = (timestamp: number): string => {
   return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 };
 
-// Formato dell'interfaccia dei dati meteo
-export interface WeatherData {
-  location: string;
-  temperature: number;
-  feelsLike: number;
-  humidity: number;
-  windSpeed: number;
-  condition: string;
-  alert?: string;
-  lat: number;  // Latitude for map and POI features
-  lon: number;  // Longitude for map and POI features
-  // Dati aggiuntivi
-  pressure?: number;        // Pressione atmosferica in hPa
-  visibility?: number;      // Visibilità in km
-  sunrise?: number;         // Orario alba (timestamp)
-  sunset?: number;          // Orario tramonto (timestamp)
-  windDirection?: number;   // Direzione del vento in gradi
-  windGust?: number;        // Raffiche di vento in km/h
-  clouds?: number;          // Nuvolosità in percentuale
-  uvIndex?: number;         // Indice UV
-  rain1h?: number;          // Precipitazioni ultima ora in mm
-  snow1h?: number;          // Neve ultima ora in mm
-  // Previsione oraria
-  hourlyForecast: {
-    time: string;
-    temperature: number;
-    condition: string;
-  }[];
-}
-
 // Fetch current weather and forecast for a location
-export const fetchWeather = async (city?: string): Promise<WeatherData | null> => {
-  // Se non viene specificata una città, usa la posizione corrente dell'utente
+export const fetchWeather = async (cityInput?: string): Promise<WeatherData | null> => {
+  let city = cityInput;
   if (!city) {
-    city = getCurrentLocation();
-    // Se non c'è una posizione corrente, usa un valore di fallback
+    city = getCurrentLocation(); // Returns city name string
     if (!city) {
       console.log('[WEATHER SERVICE] Nessuna posizione corrente, usando El Paso come fallback');
       city = 'El Paso';
     }
   }
-  
-  console.log(`[WEATHER SERVICE] Richiesta meteo per ${city}`);
-  
-  // Logica della cache commentata per forzare l'uso delle API
-  // Controlla se abbiamo dati in cache validi (solo quando si è offline)
-  const isOfflineState = typeof isOffline === 'function' && isOffline();
-  
-  console.log(`[WEATHER SERVICE] Stato offline: ${isOfflineState}`);
-  console.log(`[WEATHER SERVICE] Forzando chiamata alle API per ${city}`);
-  
-  // Utilizziamo la cache solo se siamo veramente offline
-  if (isOfflineState) {
-    const cachedData = getCachedWeatherData(city);
-    if (cachedData) {
-      console.log(`[WEATHER SERVICE] Offline: usando dati persistenti in cache per ${city}`);
-      // Ensure cached data has lat and lon properties
-      if (!cachedData.lat || !cachedData.lon) {
-        cachedData.lat = 28.6; // Default latitude for El Paso, La Palma
-        cachedData.lon = -17.8; // Default longitude for El Paso, La Palma
-      }
-      return cachedData;
+
+  const cacheKey = `weather_${city.toLowerCase().replace(/\s+/g, '_')}`;
+  console.log(`[WEATHER SERVICE] Richiesta meteo per ${city} (cache key: ${cacheKey})`);
+
+  // 1. Check intelligent cache first
+  const cachedWeatherEntry = getCacheItem<WeatherCacheEntry>(CacheNamespace.WEATHER_DATA, cacheKey);
+
+  if (cachedWeatherEntry) {
+    const isTimeValid = (Date.now() - cachedWeatherEntry.timestamp) < WEATHER_CACHE_TTL;
+    let isDistanceValid = true;
+    let currentDistance = 0;
+
+    let currentUserCoords = typeof getCurrentCoordinates === 'function' ? await getCurrentCoordinates() : null;
+    if (currentUserCoords) {
+      currentDistance = calculateDistance(
+        currentUserCoords.lat,
+        currentUserCoords.lon,
+        cachedWeatherEntry.latitude,
+        cachedWeatherEntry.longitude
+      ) / 1000; // Convert to km
+      isDistanceValid = currentDistance <= SIGNIFICANT_DISTANCE_KM;
+    }
+
+    if (isTimeValid && isDistanceValid) {
+      console.log(`[WEATHER SERVICE] Cache HIT per ${city}. Tempo valido, Distanza (${currentDistance.toFixed(1)}km) valida.`);
+      return cachedWeatherEntry.data;
+    } else {
+      console.log(`[WEATHER SERVICE] Cache STALE per ${city}. Tempo valido: ${isTimeValid}, Distanza valida: ${isDistanceValid} (${currentDistance.toFixed(1)}km).`);
     }
   }
-  
-  // Verifica se è possibile effettuare una chiamata API
+
+  // 2. Handle offline state - prefer stale cache over mock data if available
+  const isOfflineState = typeof isOffline === 'function' && isOffline();
+  if (isOfflineState) {
+    if (cachedWeatherEntry) {
+      console.log(`[WEATHER SERVICE] Offline: usando dati STALE da cache intelligente per ${city}`);
+      return { 
+        ...cachedWeatherEntry.data,
+         alert: cachedWeatherEntry.data.alert || 'Estás offline. Mostrando últimos datos disponibles.' 
+      };
+    }
+    console.log(`[WEATHER SERVICE] Offline: Nessun dato in cache intelligente. Tentando fallback...`);
+    // Fallback to mock if no cache entry when offline, or integrate old appStateService cache if desired
+    return getMockWeatherData(city);
+  }
+
+  // 3. Check API call limit
   if (!canMakeApiCall()) {
-    console.log(`[WEATHER SERVICE] Limite globale API raggiunto, usando dati fallback per ${city}`);
-    // Log l'errore e restituisci dati mock
+    console.log(`[WEATHER SERVICE] Limite API raggiunto. Tentando cache intelligente STALE o fallback per ${city}`);
+    if (cachedWeatherEntry) {
+      return { 
+        ...cachedWeatherEntry.data,
+         alert: cachedWeatherEntry.data.alert || 'Límite API. Mostrando últimos datos disponibles.' 
+      };
+    }
     logAppError('weatherService', {
-      message: 'API rate limit exceeded',
+      message: 'API rate limit exceeded, no cache available',
       type: ErrorType.API,
       detail: `Rate limit hit while fetching weather for ${city}`
     });
     return getMockWeatherData(city);
   }
-  
+
+  // 4. Perform API call
   try {
     console.log(`[WEATHER SERVICE] Esecuzione chiamata API per ${city}`);
-    
-    // First, get current weather
-    const currentUrl = `${BASE_URL}/weather?q=${city}&units=metric&appid=${API_KEY}`;
-    console.log(`[WEATHER SERVICE] Chiamata API current: ${currentUrl}`);
-    
-    const currentResponse = await fetch(currentUrl);
-    
-    if (!currentResponse.ok) {
-      // Gestione specifica degli errori HTTP
-      const statusCode = currentResponse.status;
-      let errorMsg = 'Error desconocido al obtener datos meteorológicos';
-      let errorType = ErrorType.API;
-      
-      if (statusCode === 404) {
-        errorMsg = `No se pudo encontrar la ubicación '${city}'`;
-        errorType = ErrorType.LOCATION;
-      } else if (statusCode === 401 || statusCode === 403) {
-        errorMsg = 'Acceso denegado al servicio meteorológico';
-        errorType = ErrorType.API;
-      } else if (statusCode >= 500) {
-        errorMsg = 'El servicio meteorológico no está disponible';
-        errorType = ErrorType.API;
-      } else if (statusCode === 429) {
-        errorMsg = 'Demasiadas solicitudes al servicio meteorológico';
-        errorType = ErrorType.API;
-      }
-      
-      throw createError(
-        errorType,
-        errorMsg, 
-        { statusCode, endpoint: 'current weather' }
-      );
+    const url = `${BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=es`;
+    const response = await fetchWithRetry(url);
+    if (!response.ok) {
+      logAppError('fetchCurrentWeather', `Error ${response.status}: ${response.statusText}`);
+      throw createError(ErrorType.API, `Error ${response.status}: ${response.statusText}`);
     }
-    
-    console.log(`[WEATHER SERVICE] Risposta ricevuta per ${city}`);
-    const currentData = await currentResponse.json();
-    console.log(`[WEATHER SERVICE] Ricevuti dati current per ${city}`);
-    
-    // Then get forecast
-    const forecastUrl = `${BASE_URL}/forecast?q=${city}&units=metric&appid=${API_KEY}`;
-    console.log(`[WEATHER SERVICE] Chiamata API forecast: ${forecastUrl}`);
-    
-    let forecastResponse;
+    const currentData = await response.json();
+    console.log(`[WEATHER SERVICE] Ricevuti dati current per ${city} (${currentData.coord.lat}, ${currentData.coord.lon})`);
+
+    const forecastUrl = `${API_BASE_URLS.OPENWEATHER_CURRENT}/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=es`;
     let forecastData;
-    
     try {
-      forecastResponse = await fetch(forecastUrl);
-      
-      if (!forecastResponse.ok) {
-        throw new Error(`Errore nella risposta forecast: ${forecastResponse.status}`);
-      }
-      
+      const forecastResponse = await fetchWithRetry(forecastUrl);
+      if (!forecastResponse.ok) throw new Error(`Errore nella risposta forecast: ${forecastResponse.status}`);
       forecastData = await forecastResponse.json();
       console.log(`[WEATHER SERVICE] Ricevuti dati forecast per ${city}`);
-    } catch (networkError: any) {
-      // Gestiamo l'errore ma continuiamo con i dati attuali
-      console.error(`[WEATHER SERVICE] Errore nella chiamata forecast: ${networkError.message || 'Unknown error'}`);
-      
-      logAppError('weatherService', createError(
+    } catch (forecastError: any) {
+      console.error(`[WEATHER SERVICE] Errore nella chiamata forecast per ${city}: ${forecastError.message}`);
+      logAppError('weatherService.fetchWeather.forecast', createError(
         ErrorType.API,
         'Error al obtener la previsión. Mostrando solo datos actuales.',
-        { message: networkError.message || 'Unknown forecast error', endpoint: 'forecast' }
+        { message: forecastError.message, city, endpoint: 'forecast' }
       ));
-      
-      // Creiamo un forecast reale basato sui dati attuali
-      const weatherData = {
+      // Construct WeatherData with current data and placeholder forecast
+      const partialWeatherData: WeatherData = {
         location: currentData.name,
         temperature: Math.round(currentData.main.temp),
         feelsLike: Math.round(currentData.main.feels_like),
         humidity: currentData.main.humidity,
-        windSpeed: Math.round(currentData.wind.speed * 3.6), // Convert m/s to km/h
+        windSpeed: Math.round(currentData.wind.speed * 3.6),
         condition: mapWeatherCondition(currentData.weather[0].id),
         alert: 'Solo se muestran datos actuales. Previsión no disponible.',
         lat: currentData.coord.lat,
         lon: currentData.coord.lon,
         hourlyForecast: Array(8).fill(null).map((_, i) => ({
-          time: i === 0 ? 'Ahora' : `${new Date().getHours() + i}:00`,
+          time: i === 0 ? 'Ahora' : `${new Date(Date.now() + i * 3600000).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
           temperature: Math.round(currentData.main.temp),
           condition: mapWeatherCondition(currentData.weather[0].id)
         })),
-        // Aggiunta dati aggiuntivi dai dati attuali
         pressure: currentData.main.pressure,
         visibility: currentData.visibility ? Math.round(currentData.visibility / 1000) : undefined,
         sunrise: currentData.sys?.sunrise,
@@ -196,102 +190,95 @@ export const fetchWeather = async (city?: string): Promise<WeatherData | null> =
         rain1h: currentData.rain?.['1h'],
         snow1h: currentData.snow?.['1h']
       };
-      
-      // Cache these limited data
-      cacheWeatherData(weatherData, city);
-      return weatherData;
+      const newEntryForPartialData: WeatherCacheEntry = {
+        data: partialWeatherData,
+        timestamp: Date.now(),
+        latitude: partialWeatherData.lat,
+        longitude: partialWeatherData.lon,
+      };
+      setCacheItem(CacheNamespace.WEATHER_DATA, cacheKey, newEntryForPartialData, WEATHER_CACHE_TTL);
+      console.log(`[WEATHER SERVICE] Dati meteo PARZIALI salvati in cache intelligente per ${city}`);
+      return partialWeatherData;
     }
-    
-    // Se siamo qui, abbiamo ottenuto con successo i dati della previsione
-    // Map the hourly forecast for the next 24 hours
+
     const hourlyForecast = forecastData.list.slice(0, 8).map((item: any) => ({
       time: formatTime(item.dt),
       temperature: Math.round(item.main.temp),
       condition: mapWeatherCondition(item.weather[0].id)
     }));
-    
-    // Add 'Ahora' for the first item
-    hourlyForecast[0].time = 'Ahora';
-    
-    // Check if there are any alerts
-    let alert = undefined;
-    if (forecastData.alerts && forecastData.alerts.length > 0) {
-      alert = forecastData.alerts[0].description;
+    if (hourlyForecast.length > 0) hourlyForecast[0].time = 'Ahora';
+
+    let alertMsg = undefined;
+    if (currentData.alerts && currentData.alerts.length > 0) { // Prefer alerts from current weather if available
+      alertMsg = currentData.alerts[0].description;
+    } else if (forecastData.city && forecastData.city.alerts && forecastData.city.alerts.length > 0) { // OpenWeather puts alerts in forecast's city object sometimes
+        alertMsg = forecastData.city.alerts[0].description;
+    } else if (Array.isArray(forecastData.alerts) && forecastData.alerts.length > 0) { // check root alerts on forecast (less common)
+        alertMsg = forecastData.alerts[0].description;
     }
-    
-    const weatherData = {
+
+
+    const fullWeatherData: WeatherData = {
       location: currentData.name,
       temperature: Math.round(currentData.main.temp),
       feelsLike: Math.round(currentData.main.feels_like),
       humidity: currentData.main.humidity,
-      windSpeed: Math.round(currentData.wind.speed * 3.6), // Convert m/s to km/h
+      windSpeed: Math.round(currentData.wind.speed * 3.6),
       condition: mapWeatherCondition(currentData.weather[0].id),
-      alert,
+      alert: alertMsg,
       lat: currentData.coord.lat,
       lon: currentData.coord.lon,
       hourlyForecast,
-      // Dati aggiuntivi
       pressure: currentData.main.pressure,
-      visibility: currentData.visibility ? Math.round(currentData.visibility / 1000) : undefined, // Converti da m a km
+      visibility: currentData.visibility ? Math.round(currentData.visibility / 1000) : undefined,
       sunrise: currentData.sys?.sunrise,
       sunset: currentData.sys?.sunset,
       windDirection: currentData.wind?.deg,
-      windGust: currentData.wind?.gust ? Math.round(currentData.wind.gust * 3.6) : undefined, // Converti da m/s a km/h
+      windGust: currentData.wind?.gust ? Math.round(currentData.wind.gust * 3.6) : undefined,
       clouds: currentData.clouds?.all,
       rain1h: currentData.rain?.['1h'],
       snow1h: currentData.snow?.['1h']
     };
-    
-    // Salvataggio in cache persistente
-    cacheWeatherData(weatherData, city);
-    
-    console.log(`[WEATHER SERVICE] Dati meteo completi salvati in cache per ${city}`);
-    return weatherData;
+
+    const newEntry: WeatherCacheEntry = {
+      data: fullWeatherData,
+      timestamp: Date.now(),
+      latitude: fullWeatherData.lat,
+      longitude: fullWeatherData.lon,
+    };
+    setCacheItem(CacheNamespace.WEATHER_DATA, cacheKey, newEntry, WEATHER_CACHE_TTL);
+    console.log(`[WEATHER SERVICE] Dati meteo COMPLETI salvati in cache intelligente per ${city}`);
+    return fullWeatherData;
+
   } catch (error: any) {
-    console.error(`[WEATHER SERVICE] Errore critico nel recupero dati meteo per ${city}:`, error);
-    
-    // Log dell'errore per analisi
-    logAppError('weatherService.fetchWeather', error);
-    
-    // In caso di errore, proviamo a recuperare dati precedentemente salvati
-    const cachedData = getCachedWeatherData(city);
-    if (cachedData) {
-      console.log(`[WEATHER SERVICE] Errore API: usando dati in cache come fallback per ${city}`);
-      // Aggiorniamo il campo alert per informare l'utente
-      // Ensure cached data has lat and lon properties
-      if (!cachedData.lat || !cachedData.lon) {
-        cachedData.lat = 28.6; // Default latitude for El Paso, La Palma
-        cachedData.lon = -17.8; // Default longitude for El Paso, La Palma
-      }
-      
-      return {
-        ...cachedData,
-        alert: cachedData.alert || 'Mostrando datos anteriores. No se pudieron obtener datos actualizados.'
+    console.error(`[WEATHER SERVICE] Errore CRITICO nel recupero dati meteo per ${city}:`, error.message);
+    logAppError('weatherService.fetchWeather.critical', error.type ? error : createError(ErrorType.UNKNOWN, error.message, error, city));
+
+    if (cachedWeatherEntry) {
+      console.log(`[WEATHER SERVICE] Errore API: usando dati STALE da cache intelligente come fallback per ${city}`);
+      return { 
+        ...cachedWeatherEntry.data, 
+        alert: cachedWeatherEntry.data.alert || 'Errore API. Mostrando últimos datos disponibles.' 
       };
     }
     
-    // Se non abbiamo dati in cache, usiamo i dati di fallback
     const mockData = getMockWeatherData(city);
-    // Aggiorniamo l'alert per informare l'utente
-    mockData.alert = 'No se pudieron obtener datos meteorológicos reales. Mostrando datos de ejemplo.';
-    
-    // Se l'errore ha un tipo specifico, lo propaghiamo affinché il componente possa mostrarelo
-    if (error.type) {
-      throw error; // Propaghiamo l'errore originale già formattato
-    } else {
-      // Altrimenti creiamo un errore standardizzato
-      throw createError(
-        ErrorType.NETWORK,
-        'No se pudieron obtener datos meteorológicos',
-        error,
-        'Comprueba tu conexión a internet e inténtalo de nuevo'
-      );
-    }
+    mockData.alert = 'No se pudieron obtener datos meteorológicos. Mostrando datos de ejemplo.';
+    return mockData;
   }
 };
 
 // For demo/fallback purposes
 export const getMockWeatherData = (city: string): WeatherData => {
+  // Provide default lat/lon for mock data if needed by other services
+  const defaultCoords: { [key: string]: { lat: number; lon: number } } = {
+    'el paso': { lat: 28.6586, lon: -17.7797 }, // El Paso, La Palma
+    'los llanos de aridane': { lat: 28.6584, lon: -17.9147 },
+    'santa cruz de la palma': { lat: 28.6835, lon: -17.7642 },
+  };
+  const cityKey = city.toLowerCase();
+  const coords = defaultCoords[cityKey] || { lat: 28.6, lon: -17.8 }; // Generic La Palma coords
+
   return {
     location: city,
     temperature: 24,
@@ -300,13 +287,12 @@ export const getMockWeatherData = (city: string): WeatherData => {
     windSpeed: 28,
     condition: 'sunny',
     alert: 'Calima moderada durante las próximas 24 horas.',
-    lat: 28.6, // Default latitude for El Paso, La Palma
-    lon: -17.8, // Default longitude for El Paso, La Palma,
-    // Dati meteo aggiuntivi di esempio
+    lat: coords.lat,
+    lon: coords.lon,
     pressure: 1013,
     visibility: 10,
-    sunrise: Math.floor(Date.now() / 1000) - 25200, // 7 ore fa
-    sunset: Math.floor(Date.now() / 1000) + 18000,  // 5 ore nel futuro
+    sunrise: Math.floor(Date.now() / 1000) - 25200,
+    sunset: Math.floor(Date.now() / 1000) + 18000,
     windDirection: 245,
     windGust: 35,
     clouds: 20,

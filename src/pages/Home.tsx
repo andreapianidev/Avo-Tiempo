@@ -7,6 +7,7 @@ import ForecastCard from '../components/ForecastCard';
 import AIInsight from '../components/AIInsight';
 import WeatherDetails from '../components/WeatherDetails';
 import WeatherAlertsAndPOI from '../components/WeatherAlertsAndPOI';
+import WeatherBasedPOIRecommendations from '../components/WeatherBasedPOIRecommendations';
 import { fetchWeather, WeatherData, getMockWeatherData } from '../services/weatherService';
 import { setCurrentLocation, getCurrentLocation, listenToLocationChanges } from '../services/appStateService';
 import { getAIInsight } from '../services/aiService';
@@ -404,6 +405,20 @@ const Home: React.FC = () => {
             location={weatherData.location}
             condition={weatherData.condition}
             temperature={weatherData.temperature}
+            className="mt-6"
+          />
+        )}
+        
+        {/* Nuova sezione per POI consigliati in base al meteo e all'ora */}
+        {weatherData && (
+          <WeatherBasedPOIRecommendations
+            lat={weatherData.lat}
+            lon={weatherData.lon}
+            location={weatherData.location}
+            condition={weatherData.condition}
+            temperature={weatherData.temperature}
+            time={new Date()}
+            radius={10000}
             className="mt-6"
           />
         )}

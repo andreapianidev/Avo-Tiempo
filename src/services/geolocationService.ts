@@ -1,4 +1,18 @@
 import { createError, ErrorType } from './errorService';
+import { getCacheItem, setCacheItem, CacheNamespace } from './cacheService';
+import { logAppError } from './appStateService';
+
+// Coordenadas predeterminadas para ubicaciones canarias populares
+export const DEFAULT_LOCATIONS = {
+  'el paso': { lat: 28.6586, lon: -17.7797, name: 'El Paso, La Palma' }, // El Paso, La Palma
+  'santa cruz de tenerife': { lat: 28.4636, lon: -16.2518, name: 'Santa Cruz de Tenerife' },
+  'las palmas': { lat: 28.1248, lon: -15.4300, name: 'Las Palmas de Gran Canaria' },
+  'default': { lat: 28.4636, lon: -16.2518, name: 'Islas Canarias' }  // Default to Santa Cruz de Tenerife
+};
+
+// Cache key for last known position
+const LAST_POSITION_CACHE_KEY = 'last_known_position';
+const POSITION_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 /**
  * Interface for geolocation coordinates
@@ -12,23 +26,52 @@ export interface GeoCoords {
  * Get the user's current location using browser's geolocation API
  * @returns Promise with coordinates
  */
-export const getCurrentPosition = (): Promise<GeoCoords> => {
+/**
+ * Get the user's current location using browser's geolocation API
+ * @param useFallback If true, return cached or default position on error
+ * @returns Promise with coordinates
+ */
+export const getCurrentPosition = (useFallback: boolean = false): Promise<GeoCoords> => {
   return new Promise((resolve, reject) => {
+    // Try to get cached position first in case we need to fall back to it
+    const cachedPosition = getCacheItem<GeoCoords>(CacheNamespace.LOCATIONS, LAST_POSITION_CACHE_KEY);
+    
     if (!navigator.geolocation) {
-      reject(createError(
+      const error = createError(
         ErrorType.LOCATION, 
         'La geolocalizzazione non è supportata dal tuo browser', 
         null
-      ));
-      return;
+      );
+      
+      if (useFallback) {
+        logAppError('getCurrentPosition.noGeolocation', error);
+        if (cachedPosition) {
+          console.log('[GEOLOCATION] Utilizzando l\'ultima posizione nota dalla cache');
+          return resolve(cachedPosition);
+        } else {
+          console.log('[GEOLOCATION] Utilizzando posizione predefinita: Santa Cruz de Tenerife');
+          return resolve({
+            latitude: DEFAULT_LOCATIONS.default.lat,
+            longitude: DEFAULT_LOCATIONS.default.lon
+          });
+        }
+      }
+      
+      return reject(error);
     }
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        resolve({
+        const coords = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude
-        });
+        };
+        
+        // Cache successful position for future fallback
+        setCacheItem(CacheNamespace.LOCATIONS, LAST_POSITION_CACHE_KEY, coords, POSITION_CACHE_TTL);
+        console.log('[GEOLOCATION] Posizione ottenuta con successo e salvata in cache');
+        
+        resolve(coords);
       },
       (error) => {
         let errorMessage: string;
@@ -47,15 +90,32 @@ export const getCurrentPosition = (): Promise<GeoCoords> => {
             errorMessage = 'Errore sconosciuto durante la geolocalizzazione';
         }
         
-        reject(createError(
+        const appError = createError(
           ErrorType.LOCATION, 
           errorMessage, 
           error
-        ));
+        );
+        
+        if (useFallback) {
+          logAppError('getCurrentPosition.error', appError);
+          
+          if (cachedPosition) {
+            console.log('[GEOLOCATION] Fallback: utilizzando l\'ultima posizione nota dalla cache');
+            return resolve(cachedPosition);
+          } else {
+            console.log('[GEOLOCATION] Fallback: utilizzando posizione predefinita Canarie');
+            return resolve({
+              latitude: DEFAULT_LOCATIONS.default.lat,
+              longitude: DEFAULT_LOCATIONS.default.lon
+            });
+          }
+        }
+        
+        reject(appError);
       }, 
       { 
-        enableHighAccuracy: true, 
-        timeout: 10000, 
+        enableHighAccuracy: false, 
+        timeout: 20000, 
         maximumAge: 600000  // Cache position for 10 minutes
       }
     );
@@ -119,13 +179,32 @@ export const getCityFromCoords = async (coords: GeoCoords): Promise<string> => {
  * Get both coordinates and city name using browser geolocation
  * @returns Promise with city name
  */
-export const getCurrentCity = async (): Promise<{city: string, coords: GeoCoords}> => {
+/**
+ * Get both coordinates and city name using browser geolocation
+ * @param useFallback If true, use cached or default position on error
+ * @returns Promise with city name and coordinates
+ */
+export const getCurrentCity = async (useFallback: boolean = true): Promise<{city: string, coords: GeoCoords}> => {
   try {
-    const coords = await getCurrentPosition();
+    const coords = await getCurrentPosition(useFallback);
     const city = await getCityFromCoords(coords);
     return { city, coords };
   } catch (error) {
-    console.error('Error getting current city:', error);
+    console.error('[GEOLOCATION] Error getting current city:', error);
+    
+    if (useFallback) {
+      console.log('[GEOLOCATION] Fallback: usando posizione predefinita per città');
+      // Use default location for La Palma
+      const defaultCoords = {
+        latitude: DEFAULT_LOCATIONS.default.lat,
+        longitude: DEFAULT_LOCATIONS.default.lon
+      };
+      return {
+        city: DEFAULT_LOCATIONS.default.name,
+        coords: defaultCoords
+      };
+    }
+    
     throw error;
   }
 };

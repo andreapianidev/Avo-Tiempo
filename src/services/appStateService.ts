@@ -9,6 +9,7 @@ const TRENDS_CACHE_KEY = 'avo_trends_cache';
 const LAST_API_CALL_KEY = 'avo_last_api_call';
 const ERROR_LOG_KEY = 'avo_error_log';
 const APP_STATE_VERSION = 'avo_state_version';
+const SAVED_LOCATIONS_KEY = 'avo_saved_locations'; // Key for storing saved locations array
 
 // Versione corrente dello stato dell'app
 // Importante: incrementare quando cambia la struttura dei dati salvati
@@ -140,9 +141,87 @@ export const getCurrentLocation = (): string => {
     const location = localStorage.getItem(CURRENT_LOCATION_KEY);
     return location || '';
   } catch (error) {
-    console.error('[APP STATE] Errore nel recupero della posizione:', error);
     logAppError('getCurrentLocation', error);
-    return '';
+    return ''; // Default to empty string on error
+  }
+};
+
+/**
+ * Recupera l'elenco delle posizioni salvate da localStorage.
+ * @returns Un array di stringhe con i nomi delle posizioni salvate.
+ */
+export const getSavedLocations = (): string[] => {
+  try {
+    const savedLocationsJson = localStorage.getItem(SAVED_LOCATIONS_KEY);
+    return savedLocationsJson ? JSON.parse(savedLocationsJson) : [];
+  } catch (error) {
+    logAppError('getSavedLocations', error);
+    return [];
+  }
+};
+
+/**
+ * Controlla se una posizione è già salvata.
+ * @param locationName Il nome della posizione da controllare.
+ * @returns True se la posizione è salvata, altrimenti false.
+ */
+export const isLocationSaved = (locationName: string): boolean => {
+  const savedLocations = getSavedLocations();
+  return savedLocations.some(loc => loc.toLowerCase() === locationName.toLowerCase());
+};
+
+/**
+ * Aggiunge una posizione all'elenco delle posizioni salvate.
+ * Non aggiunge duplicati (case-insensitive) o stringhe vuote.
+ * @param locationName Il nome della posizione da aggiungere.
+ * @returns True se la posizione è stata aggiunta, false altrimenti (es. duplicato, vuota).
+ */
+export const addSavedLocation = (locationName: string): boolean => {
+  if (!locationName || typeof locationName !== 'string' || locationName.trim() === '') {
+    logAppError('addSavedLocation', 'Tentativo di aggiungere una posizione non valida o vuota.');
+    return false;
+  }
+  if (isLocationSaved(locationName)) {
+    console.log(`[APP STATE] La posizione "${locationName}" è già salvata.`);
+    return false; // Non aggiungere duplicati
+  }
+
+  try {
+    const savedLocations = getSavedLocations();
+    savedLocations.push(locationName.trim());
+    localStorage.setItem(SAVED_LOCATIONS_KEY, JSON.stringify(savedLocations));
+    window.dispatchEvent(new CustomEvent('savedLocationsChanged', { detail: { savedLocations } }));
+    console.log(`[APP STATE] Posizione "${locationName}" aggiunta alle salvate.`);
+    return true;
+  } catch (error) {
+    logAppError('addSavedLocation', error);
+    return false;
+  }
+};
+
+/**
+ * Rimuove una posizione dall'elenco delle posizioni salvate.
+ * @param locationName Il nome della posizione da rimuovere.
+ */
+export const removeSavedLocation = (locationName: string): void => {
+  if (!locationName || typeof locationName !== 'string' || locationName.trim() === '') {
+    logAppError('removeSavedLocation', 'Tentativo di rimuovere una posizione non valida o vuota.');
+    return;
+  }
+  try {
+    let savedLocations = getSavedLocations();
+    const initialLength = savedLocations.length;
+    savedLocations = savedLocations.filter(loc => loc.toLowerCase() !== locationName.toLowerCase());
+    
+    if (savedLocations.length < initialLength) {
+      localStorage.setItem(SAVED_LOCATIONS_KEY, JSON.stringify(savedLocations));
+      window.dispatchEvent(new CustomEvent('savedLocationsChanged', { detail: { savedLocations } }));
+      console.log(`[APP STATE] Posizione "${locationName}" rimossa dalle salvate.`);
+    } else {
+      console.log(`[APP STATE] Posizione "${locationName}" non trovata nelle salvate per la rimozione.`);
+    }
+  } catch (error) {
+    logAppError('removeSavedLocation', error);
   }
 };
 
@@ -375,6 +454,46 @@ export const listenToConnectivityChanges = (callback: (online: boolean) => void)
   return () => {
     window.removeEventListener('connectivityChanged', handler);
   };
+};
+
+/**
+ * Registra un errore dell'applicazione per analisi
+ */
+// Definizione del tipo per le coordinate geografiche
+export interface Coordinates {
+  lat: number;
+  lon: number;
+}
+
+/**
+ * Recupera le coordinate geografiche correnti dell'utente.
+ * Supporta browser web, iOS e Android grazie al locationPermissionService.
+ * @returns Una Promise che risolve con un oggetto { lat: number, lon: number } o null se le coordinate non possono essere ottenute.
+ */
+export const getCurrentCoordinates = async (): Promise<Coordinates | null> => {
+  try {
+    // Importiamo il servizio dinamicamente per evitare dipendenze circolari
+    const locationService = await import('./locationPermissionService');
+    
+    // Usiamo il nuovo servizio che gestisce tutte le piattaforme
+    const coordinates = await locationService.getDeviceLocation({
+      enableHighAccuracy: true, 
+      timeout: 10000, 
+      maximumAge: 0
+    });
+    
+    // Log per debug
+    if (coordinates) {
+      console.log(`[APP STATE] Posizione ottenuta: ${coordinates.lat}, ${coordinates.lon}`);
+    } else {
+      console.log('[APP STATE] Impossibile ottenere la posizione dell\'utente');
+    }
+    
+    return coordinates;
+  } catch (error) {
+    logAppError('getCurrentCoordinates', error);
+    return null;
+  }
 };
 
 /**

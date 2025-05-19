@@ -14,13 +14,14 @@ const CACHE_PREFIX = 'avo_cache_';
 
 // Cache types
 export enum CacheNamespace {
-  WEATHER = 'weather',
+  WEATHER = 'weather', // General weather namespace, if used elsewhere
   LOCATIONS = 'locations',
   SETTINGS = 'settings',
   POI = 'poi',
   AI_INSIGHTS = 'ai_insights',
   ALERTS = 'alerts',
-  UI_STATE = 'ui_state'
+  UI_STATE = 'ui_state',
+  WEATHER_DATA = 'weather_data' // Specific for detailed weather objects
 }
 
 // Cache item structure

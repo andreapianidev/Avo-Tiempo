@@ -8,6 +8,15 @@ export interface WeatherTrend {
   minTemp: number;
   condition: string;
   precipitation: number;
+  humidity?: number;         // Umidità in percentuale
+  windSpeed?: number;       // Velocità del vento in km/h
+  windDirection?: number;   // Direzione del vento in gradi
+  uvIndex?: number;         // Indice UV (0-12)
+  pressure?: number;        // Pressione atmosferica in hPa
+  visibility?: number;      // Visibilità in km
+  icon?: string;            // Codice icona per rappresentazione grafica
+  sunrise?: number;         // Orario alba (timestamp Unix)
+  sunset?: number;          // Orario tramonto (timestamp Unix)
 }
 
 export interface TrendSummary {

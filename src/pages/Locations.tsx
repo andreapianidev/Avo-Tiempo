@@ -43,6 +43,7 @@ const Locations: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'name' | 'recent' | 'temperature'>('recent');
   const [isOffline, setIsOffline] = useState(false);
   const [showRecentlyRemoved, setShowRecentlyRemoved] = useState(false);
+  const [forceRefreshPOI, setForceRefreshPOI] = useState<boolean>(false);
   
   // Estados para las nuevas características
   const [showAIsuggestions, setShowAIsuggestions] = useState(false);
@@ -50,6 +51,7 @@ const Locations: React.FC = () => {
   const [locationToShare, setLocationToShare] = useState<LocationItem | null>(null);
   const [userInterests, setUserInterests] = useState<string[]>(['playa', 'montañas', 'gastronomía']);
   const [weatherPreference, setWeatherPreference] = useState<'sunny' | 'mild' | 'cool' | 'any'>('sunny');
+  const [poiSearchRadius, setPoiSearchRadius] = useState<number>(10000); // Raggio di ricerca POI in metri
 
   // Get user settings for temperature units
   const { units } = getUserSettings();
@@ -480,7 +482,7 @@ const Locations: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto my-4 px-4">
+    <div className="locations-page h-full w-full overflow-y-auto p-4 pb-24 bg-amber-50" style={{WebkitOverflowScrolling: 'touch'}}>
       {/* Modal para compartir ubicación */}
       {locationToShare && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -804,6 +806,49 @@ const Locations: React.FC = () => {
                 {/* Aggiungiamo i POI consigliati per categoria */}
                 <div className="mt-8 w-full max-w-md">
                   <h2 className="text-xl font-bold text-center mb-4">Luoghi consigliati nelle Canarie</h2>
+                  
+                  {/* Controllo per il raggio di ricerca e aggiornamento */}
+                  <div className="mb-4 flex items-center justify-center gap-3">
+                    {/* Selettore del raggio */}
+                    <div className="flex items-center space-x-2 py-2 px-3 bg-amber-50 rounded-lg">
+                      <label htmlFor="poi-radius-selector" className="text-sm text-gray-700">Raggio:</label>
+                      <select 
+                        id="poi-radius-selector"
+                        value={poiSearchRadius}
+                        onChange={(e) => {
+                          setPoiSearchRadius(Number(e.target.value));
+                          setIsLoading(true);
+                          // Forza l'aggiornamento dei POI con il nuovo raggio
+                          setTimeout(() => setIsLoading(false), 1000);
+                        }}
+                        className="py-1 px-2 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      >
+                        <option value="5000">5 km</option>
+                        <option value="10000">10 km</option>
+                        <option value="15000">15 km</option>
+                        <option value="20000">20 km</option>
+                        <option value="30000">30 km</option>
+                      </select>
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        // Forza l'aggiornamento reale dei POI con refresh=true
+                        setIsLoading(true);
+                        setForceRefreshPOI(true);
+                        // Reset dopo un breve ritardo
+                        setTimeout(() => {
+                          setForceRefreshPOI(false);
+                          setIsLoading(false);
+                        }, 2000);
+                      }}
+                      className="flex items-center justify-center py-2 px-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                    >
+                      <FontAwesomeIcon icon={faRotate} className="mr-2" />
+                      Aggiorna POI
+                    </button>
+                  </div>
+                  
                   <CategoryPOIRecommendations 
                     location={{
                       id: 'default',
@@ -812,8 +857,64 @@ const Locations: React.FC = () => {
                       lon: -16.2518,
                       temperature: 22,
                       condition: 'Soleggiato'
-                    }} 
+                    }}
+                    searchRadius={poiSearchRadius}
+                    forceRefresh={forceRefreshPOI}
+                    onRadiusChange={(radius) => {
+                      setPoiSearchRadius(radius);
+                      setIsLoading(true);
+                      // Forza l'aggiornamento dei POI con il nuovo raggio
+                      setForceRefreshPOI(true);
+                      setTimeout(() => {
+                        setForceRefreshPOI(false);
+                        setIsLoading(false);
+                      }, 2000);
+                    }}
                   />
+                </div>
+                
+                {/* Aggiungiamo una sezione per cercare altre località */}
+                <div className="mt-8 w-full max-w-md">
+                  <h2 className="text-xl font-bold text-center mb-4">Cerca altre località</h2>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Nome della località..."
+                      value={newLocation}
+                      onChange={(e) => setNewLocation(e.target.value)}
+                      className="w-full py-2 px-4 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={addLocation}
+                      disabled={!newLocation.trim() || isAdding}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-amber-500 hover:text-amber-600 disabled:text-gray-300"
+                    >
+                      {isAdding ? (
+                        <FontAwesomeIcon icon={faSpinner} spin />
+                      ) : (
+                        <FontAwesomeIcon icon={faPlus} />
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Suggerimenti di località popolari */}
+                  <div className="mt-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Località popolari:</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {['Puerto de la Cruz', 'Adeje', 'La Laguna', 'Maspalomas', 'Arona', 'Playa de las Américas'].map(loc => (
+                        <button
+                          key={loc}
+                          onClick={() => {
+                            setNewLocation(loc);
+                            setTimeout(() => addLocation(), 100);
+                          }}
+                          className="py-1 px-3 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                        >
+                          {loc}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </>
             )}

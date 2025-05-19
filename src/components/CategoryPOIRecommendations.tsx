@@ -17,11 +17,17 @@ import { AppError, handlePOIError } from '../services/errorService';
 interface CategoryPOIRecommendationsProps {
   location: LocationItem;
   className?: string;
+  searchRadius?: number;
+  onRadiusChange?: (radius: number) => void;
+  forceRefresh?: boolean;
 }
 
 const CategoryPOIRecommendations: React.FC<CategoryPOIRecommendationsProps> = ({
   location,
-  className = ''
+  className = '',
+  searchRadius = 10000,
+  onRadiusChange,
+  forceRefresh = false
 }) => {
   const [pois, setPois] = useState<POI[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -55,15 +61,16 @@ const CategoryPOIRecommendations: React.FC<CategoryPOIRecommendationsProps> = ({
     { id: 'amenity-stores', name: 'Negozi Locali', icon: faStore }
   ];
 
-  const fetchPOIs = useCallback(async () => {
+  const fetchPOIs = useCallback(async (refresh: boolean = false) => {
     if (!location || !location.lat || !location.lon) return;
     
     setLoading(true);
     setError(null);
     
     try {
-      // Recupera i POI da OpenStreetMap
-      const nearbyPOIs = await osmService.getPOIs(location.lat, location.lon, 5000);
+      // Recupera i POI da OpenStreetMap con il raggio specificato
+      // Usa forceRefresh per bypassare la cache se necessario
+      const nearbyPOIs = await osmService.getPOIs(location.lat, location.lon, searchRadius, [], refresh);
       setPois(nearbyPOIs);
     } catch (err) {
       const appErr = handlePOIError(err, 'Errore nel caricamento dei punti di interesse.');
@@ -71,11 +78,11 @@ const CategoryPOIRecommendations: React.FC<CategoryPOIRecommendationsProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [location]);
+  }, [location, searchRadius]);
 
   useEffect(() => {
-    fetchPOIs();
-  }, [fetchPOIs]);
+    fetchPOIs(forceRefresh);
+  }, [fetchPOIs, forceRefresh]);
 
   // Formatta la distanza in modo leggibile
   const formatDistance = (meters: number): string => {
@@ -258,15 +265,60 @@ const CategoryPOIRecommendations: React.FC<CategoryPOIRecommendationsProps> = ({
   if (pois.length === 0) {
     return (
       <div className={`text-center py-4 ${className}`}>
+        {/* Selettore del raggio anche quando non ci sono POI */}
+        {onRadiusChange && (
+          <div className="flex justify-center items-center mb-4">
+            <div className="flex items-center space-x-2 py-2 px-3 bg-amber-50 rounded-lg">
+              <label htmlFor="radius-empty-selector" className="text-sm text-gray-700">Raggio di ricerca:</label>
+              <select 
+                id="radius-empty-selector"
+                value={searchRadius}
+                onChange={(e) => onRadiusChange(Number(e.target.value))}
+                className="py-1 px-2 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+              >
+                <option value="2000">2 km</option>
+                <option value="5000">5 km</option>
+                <option value="10000">10 km</option>
+                <option value="15000">15 km</option>
+                <option value="20000">20 km</option>
+                <option value="30000">30 km</option>
+              </select>
+            </div>
+          </div>
+        )}
+        
         <FontAwesomeIcon icon={faMapMarkerAlt} className="text-amber-500 text-xl mb-2" />
         <p className="text-gray-600">Nessun luogo interessante trovato vicino a {location.name}.</p>
+        <p className="text-sm text-gray-500 mt-2">Prova ad aumentare il raggio di ricerca o cambiare località.</p>
       </div>
     );
   }
 
   return (
     <div className={`category-poi-recommendations ${className}`}>
-      <h3 className="font-medium text-lg mb-3">Luoghi consigliati per categoria:</h3>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-medium text-lg">Luoghi consigliati per categoria:</h3>
+        
+        {/* Selettore del raggio di ricerca */}
+        {onRadiusChange && (
+          <div className="flex items-center space-x-2">
+            <label htmlFor="radius-selector" className="text-sm text-gray-600">Raggio:</label>
+            <select 
+              id="radius-selector"
+              value={searchRadius}
+              onChange={(e) => onRadiusChange(Number(e.target.value))}
+              className="py-1 px-2 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+            >
+              <option value="2000">2 km</option>
+              <option value="5000">5 km</option>
+              <option value="10000">10 km</option>
+              <option value="15000">15 km</option>
+              <option value="20000">20 km</option>
+              <option value="30000">30 km</option>
+            </select>
+          </div>
+        )}
+      </div>
       
       {/* Categorie */}
       <div className="flex flex-wrap gap-2 mb-4">
