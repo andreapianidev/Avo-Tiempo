@@ -25,6 +25,11 @@ import AIWeatherTrends from '../components/AIWeatherTrends';
 import LocationSharing from '../components/LocationSharing';
 import LocationGroups from '../components/LocationGroups';
 
+// Importiamo i componenti per l'analisi dei POI che abbiamo creato
+import POICharts from '../components/POICharts';
+import POIRecommendations from '../components/POIRecommendations';
+import LocationAnalytics from '../components/LocationAnalytics';
+
 // Location interface is imported from locationService
 
 const Locations: React.FC = () => {
@@ -52,6 +57,11 @@ const Locations: React.FC = () => {
   const [userInterests, setUserInterests] = useState<string[]>(['playa', 'montañas', 'gastronomía']);
   const [weatherPreference, setWeatherPreference] = useState<'sunny' | 'mild' | 'cool' | 'any'>('sunny');
   const [poiSearchRadius, setPoiSearchRadius] = useState<number>(10000); // Raggio di ricerca POI in metri
+  
+  // Stati per i nuovi componenti di analisi
+  const [poiData, setPoiData] = useState<any[]>([]);
+  const [isLoadingPOI, setIsLoadingPOI] = useState<boolean>(false);
+  const [selectedPOICategory, setSelectedPOICategory] = useState<string>('all');
 
   // Get user settings for temperature units
   const { units } = getUserSettings();
@@ -871,6 +881,140 @@ const Locations: React.FC = () => {
                       }, 2000);
                     }}
                   />
+                  
+                  {/* NUOVO COMPONENTE 1: LocationAnalytics - Integra l'analisi dei POI con insight AI */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <h3 className="text-lg font-semibold mb-4 text-center">Analisi Località</h3>
+                    <LocationAnalytics 
+                      pois={poiData}
+                      weatherData={{
+                        location: 'Santa Cruz de Tenerife',
+                        temperature: 24,
+                        feelsLike: 26,
+                        humidity: 65,
+                        windSpeed: 12,
+                        condition: 'clear',
+                        lat: 28.4636,
+                        lon: -16.2518,
+                        hourlyForecast: []
+                      }}
+                      currentLat={28.4636}
+                      currentLon={-16.2518}
+                      locationName={'Santa Cruz de Tenerife'}
+                      onRefreshPOIs={() => {
+                        setIsLoadingPOI(true);
+                        setForceRefreshPOI(true);
+                        // Simuliamo il caricamento dei POI
+                        setTimeout(() => {
+                          setForceRefreshPOI(false);
+                          setIsLoadingPOI(false);
+                        }, 1500);
+                      }}
+                    />
+                  </div>
+                  
+                  {/* NUOVO COMPONENTE 2: POICharts - Visualizzazione grafica dei POI con grafici */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <h3 className="text-lg font-semibold mb-4 text-center">Analisi Categorica dei POI</h3>
+                    <POICharts 
+                      pois={poiData.length > 0 ? poiData : [
+                        {
+                          id: 'sample_1',
+                          name: 'Playa de Las Teresitas',
+                          type: 'beach',
+                          category: 'natural',
+                          lat: 28.5077,
+                          lon: -16.1885,
+                          distance: 5000,
+                          tags: { natural: 'beach' },
+                          icon: 'fa-umbrella-beach',
+                          isInteresting: true
+                        },
+                        {
+                          id: 'sample_2',
+                          name: 'Parque García Sanabria',
+                          type: 'park',
+                          category: 'leisure',
+                          lat: 28.4698,
+                          lon: -16.2569,
+                          distance: 2000,
+                          tags: { leisure: 'park' },
+                          icon: 'fa-tree',
+                          isInteresting: true
+                        },
+                        {
+                          id: 'sample_3',
+                          name: 'Auditorio de Tenerife',
+                          type: 'attraction',
+                          category: 'tourism',
+                          lat: 28.4584,
+                          lon: -16.2475,
+                          distance: 1200,
+                          tags: { tourism: 'attraction' },
+                          icon: 'fa-monument',
+                          isInteresting: true
+                        }
+                      ]}
+                      currentLat={28.4636}
+                      currentLon={-16.2518}
+                    />
+                  </div>
+                  
+                  {/* NUOVO COMPONENTE 3: POIRecommendations - Consigli personalizzati per attività */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <h3 className="text-lg font-semibold mb-4 text-center">Consigli Attività</h3>
+                    <POIRecommendations 
+                      pois={poiData.length > 0 ? poiData : [
+                        {
+                          id: 'sample_1',
+                          name: 'Playa de Las Teresitas',
+                          type: 'beach',
+                          category: 'natural',
+                          lat: 28.5077,
+                          lon: -16.1885,
+                          distance: 5000,
+                          tags: { natural: 'beach' },
+                          icon: 'fa-umbrella-beach',
+                          isInteresting: true
+                        },
+                        {
+                          id: 'sample_2',
+                          name: 'Parque García Sanabria',
+                          type: 'park',
+                          category: 'leisure',
+                          lat: 28.4698,
+                          lon: -16.2569,
+                          distance: 2000,
+                          tags: { leisure: 'park' },
+                          icon: 'fa-tree',
+                          isInteresting: true
+                        },
+                        {
+                          id: 'sample_3',
+                          name: 'Auditorio de Tenerife',
+                          type: 'attraction',
+                          category: 'tourism',
+                          lat: 28.4584,
+                          lon: -16.2475,
+                          distance: 1200,
+                          tags: { tourism: 'attraction' },
+                          icon: 'fa-monument',
+                          isInteresting: true
+                        }
+                      ]}
+                      weatherData={{
+                        location: 'Santa Cruz de Tenerife',
+                        temperature: 24,
+                        feelsLike: 26,
+                        humidity: 65,
+                        windSpeed: 12,
+                        condition: 'clear',
+                        lat: 28.4636,
+                        lon: -16.2518,
+                        hourlyForecast: []
+                      }}
+                    />
+                  </div>
                 </div>
                 
                 {/* Aggiungiamo una sezione per cercare altre località */}

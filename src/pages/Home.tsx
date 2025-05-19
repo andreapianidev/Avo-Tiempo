@@ -1,13 +1,19 @@
 import * as React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotate, faLocationDot, faMapMarkerAlt, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+import { faRotate, faLocationDot, faMapMarkerAlt, faExclamationTriangle, faChartPie, faChartLine, faMap } from '@fortawesome/free-solid-svg-icons';
 import WeatherBox from '../components/WeatherBox';
 import ForecastCard from '../components/ForecastCard';
 import AIInsight from '../components/AIInsight';
 import WeatherDetails from '../components/WeatherDetails';
 import WeatherAlertsAndPOI from '../components/WeatherAlertsAndPOI';
 import WeatherBasedPOIRecommendations from '../components/WeatherBasedPOIRecommendations';
+
+// Importiamo i nuovi componenti di grafici
+import POICategoryDistribution from '../components/POICategoryDistribution';
+import POIDistanceDistribution from '../components/POIDistanceDistribution';
+import WeatherTrendChart from '../components/WeatherTrendChart';
+import POIDensityMap from '../components/POIDensityMap';
 import { fetchWeather, WeatherData, getMockWeatherData } from '../services/weatherService';
 import { setCurrentLocation, getCurrentLocation, listenToLocationChanges } from '../services/appStateService';
 import { getAIInsight } from '../services/aiService';
@@ -396,6 +402,49 @@ const Home: React.FC = () => {
             Los datos meteorológicos se actualizan automáticamente cada hora o cuando cambias de ubicación.
           </p>
         </div>
+        
+        {/* Sezione con i grafici di analisi */}
+        {weatherData && (
+          <div className="mt-6">
+            <h2 className="font-medium text-[var(--color-text-primary)] mb-4 flex items-center">
+              <FontAwesomeIcon icon={faChartPie} className="mr-2 text-[var(--color-highlight)]" />
+              Analisi Dati e Statistiche
+            </h2>
+            
+            {/* Grafico dell'andamento meteo settimanale */}
+            <WeatherTrendChart 
+              lat={weatherData.lat}
+              lon={weatherData.lon}
+              location={weatherData.location}
+              className="mb-4"
+            />
+            
+            {/* Layout a due colonne per i grafici di distribuzione POI */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* Grafico distribuzione POI per categoria */}
+              <POICategoryDistribution 
+                lat={weatherData.lat}
+                lon={weatherData.lon}
+                radius={10000}
+              />
+              
+              {/* Grafico distribuzione POI per distanza */}
+              <POIDistanceDistribution 
+                lat={weatherData.lat}
+                lon={weatherData.lon}
+                radius={10000}
+              />
+            </div>
+            
+            {/* Mappa di densità dei POI */}
+            <POIDensityMap 
+              lat={weatherData.lat}
+              lon={weatherData.lon}
+              radius={10000}
+              className="mb-4"
+            />
+          </div>
+        )}
         
         {/* Sezione per allerte meteo e POI */}
         {weatherData && (

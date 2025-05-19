@@ -450,6 +450,29 @@ const getPOIs = async (
   filters: string[] = [],
   forceRefresh: boolean = false
 ): Promise<POI[]> => {
+  // Log per debug
+  console.log(`[OSM SERVICE] Richiesta POI per coordinate: ${lat}, ${lon}, raggio: ${radius}m`);
+  
+  // Controllo speciale per Santa Cruz de Tenerife, dove a volte l'API restituisce pochi risultati
+  const isSantaCruzTenerife = Math.abs(lat - 28.4578) < 0.1 && Math.abs(lon - (-16.2637)) < 0.1;
+  if (isSantaCruzTenerife) {
+    console.log('[OSM SERVICE] Rilevata ricerca per Santa Cruz de Tenerife, utilizzo query ottimizzata');
+    // Se siamo vicini a Santa Cruz, usiamo un set più ampio di filtri per trovare più POI
+    if (filters.length === 0) {
+      filters = [
+        'node["tourism"]',
+        'node["natural"]',
+        'node["amenity"~"restaurant|cafe|bar|pub|ice_cream|fast_food"]',
+        'node["shop"~"bakery|supermarket|convenience|mall"]',
+        'way["tourism"]',
+        'way["natural"="beach"]',
+        'way["leisure"="park"]'
+      ];
+    }
+    // Aumentiamo il raggio se specificato troppo piccolo
+    radius = Math.max(radius, 30000);
+  }
+  
   // Genera chiave cache
   const cacheKey = generateCacheKey(lat, lon, radius, filters);
   
@@ -585,6 +608,195 @@ const getPOIs = async (
  * Restituisce POI predefiniti per una posizione quando tutte le API falliscono
  */
 const getDefaultPOIs = (lat: number, lon: number): POI[] => {
+  // Controllo speciale per Santa Cruz de Tenerife
+  const isSantaCruzTenerife = Math.abs(lat - 28.4578) < 0.1 && Math.abs(lon - (-16.2637)) < 0.1;
+  
+  if (isSantaCruzTenerife) {
+    console.log('[OSM SERVICE] Utilizzo dati predefiniti specifici per Santa Cruz de Tenerife');
+    return [
+      {
+        id: 'scz_1',
+        name: 'Playa de Las Teresitas',
+        type: 'beach',
+        category: 'natural',
+        lat: 28.5077,
+        lon: -16.1885,
+        distance: calculateDistance(lat, lon, 28.5077, -16.1885),
+        tags: { natural: 'beach' },
+        icon: POI_ICONS.beach || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_2',
+        name: 'Parque García Sanabria',
+        type: 'park',
+        category: 'leisure',
+        lat: 28.4698,
+        lon: -16.2569,
+        distance: calculateDistance(lat, lon, 28.4698, -16.2569),
+        tags: { leisure: 'park' },
+        icon: POI_ICONS.park || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_3',
+        name: 'Auditorio de Tenerife',
+        type: 'attraction',
+        category: 'tourism',
+        lat: 28.4584,
+        lon: -16.2475,
+        distance: calculateDistance(lat, lon, 28.4584, -16.2475),
+        tags: { tourism: 'attraction' },
+        icon: POI_ICONS.attraction || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_4',
+        name: 'Museo de la Naturaleza y el Hombre',
+        type: 'museum',
+        category: 'tourism',
+        lat: 28.4633,
+        lon: -16.2511,
+        distance: calculateDistance(lat, lon, 28.4633, -16.2511),
+        tags: { tourism: 'museum' },
+        icon: POI_ICONS.museum || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_5',
+        name: 'Mercado de Nuestra Señora de África',
+        type: 'marketplace',
+        category: 'amenity',
+        lat: 28.4632,
+        lon: -16.2649,
+        distance: calculateDistance(lat, lon, 28.4632, -16.2649),
+        tags: { amenity: 'marketplace' },
+        icon: POI_ICONS.marketplace || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_6',
+        name: 'Plaza de España',
+        type: 'attraction',
+        category: 'tourism',
+        lat: 28.4676,
+        lon: -16.2452,
+        distance: calculateDistance(lat, lon, 28.4676, -16.2452),
+        tags: { tourism: 'attraction' },
+        icon: POI_ICONS.attraction || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_7',
+        name: 'Iglesia de la Concepción',
+        type: 'attraction',
+        category: 'tourism',
+        lat: 28.4686,
+        lon: -16.2496,
+        distance: calculateDistance(lat, lon, 28.4686, -16.2496),
+        tags: { tourism: 'attraction', amenity: 'place_of_worship' },
+        icon: POI_ICONS.attraction || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_8',
+        name: 'Parque Marítimo César Manrique',
+        type: 'swimming_pool',
+        category: 'leisure',
+        lat: 28.4598,
+        lon: -16.2393,
+        distance: calculateDistance(lat, lon, 28.4598, -16.2393),
+        tags: { leisure: 'swimming_pool' },
+        icon: POI_ICONS.swimming_pool || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_9',
+        name: 'Castillo de San Juan Bautista',
+        type: 'attraction',
+        category: 'historic',
+        lat: 28.4578,
+        lon: -16.2416,
+        distance: calculateDistance(lat, lon, 28.4578, -16.2416),
+        tags: { historic: 'castle' },
+        icon: POI_ICONS.attraction || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_10',
+        name: 'Centro Comercial Meridiano',
+        type: 'mall',
+        category: 'shop',
+        lat: 28.4563,
+        lon: -16.2571,
+        distance: calculateDistance(lat, lon, 28.4563, -16.2571),
+        tags: { shop: 'mall' },
+        icon: POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_11',
+        name: 'Playa de Benijo',
+        type: 'beach',
+        category: 'natural',
+        lat: 28.5734,
+        lon: -16.1802,
+        distance: calculateDistance(lat, lon, 28.5734, -16.1802),
+        tags: { natural: 'beach' },
+        icon: POI_ICONS.beach || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_12',
+        name: 'Palmetum',
+        type: 'garden',
+        category: 'tourism',
+        lat: 28.4532,
+        lon: -16.2443,
+        distance: calculateDistance(lat, lon, 28.4532, -16.2443),
+        tags: { tourism: 'attraction', leisure: 'garden' },
+        icon: POI_ICONS.garden || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_13',
+        name: 'Restaurante El Cine',
+        type: 'restaurant',
+        category: 'amenity',
+        lat: 28.4695,
+        lon: -16.2487,
+        distance: calculateDistance(lat, lon, 28.4695, -16.2487),
+        tags: { amenity: 'restaurant' },
+        icon: POI_ICONS.restaurant || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_14',
+        name: 'Mirador de Cruz del Carmen',
+        type: 'viewpoint',
+        category: 'tourism',
+        lat: 28.5358,
+        lon: -16.2984,
+        distance: calculateDistance(lat, lon, 28.5358, -16.2984),
+        tags: { tourism: 'viewpoint' },
+        icon: POI_ICONS.viewpoint || POI_ICONS.default,
+        isInteresting: true
+      },
+      {
+        id: 'scz_15',
+        name: 'Sendero de Los Sentidos',
+        type: 'hiking',
+        category: 'route',
+        lat: 28.5326,
+        lon: -16.2981,
+        distance: calculateDistance(lat, lon, 28.5326, -16.2981),
+        tags: { route: 'hiking' },
+        icon: POI_ICONS.hiking || POI_ICONS.default,
+        isInteresting: true
+      }
+    ];
+  }
+  
   // Per i luoghi in Gran Canaria, restituiamo POI predefiniti
   // Consideriamo che il centro di Las Palmas è vicino a lat: 28.13, lon: -15.43
   const isNearLasPalmas = calculateDistance(lat, lon, 28.13, -15.43) < 20000;
