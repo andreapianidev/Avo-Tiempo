@@ -5,10 +5,10 @@ import { getCacheItem, setCacheItem, CacheNamespace } from './cacheService';
 import { calculateDistance } from './osmService';
 import { API_KEYS, API_BASE_URLS, fetchWithRetry } from './apiConfigService';
 import { redact, logInfo, logWarning, logError } from '../utils/logger';
+import { AemetArea, aemetService } from './aemetService';
 
-// --- patch: configurazione per diversi piani di OpenWeather
-type OpenWeatherPlan = 'free' | 'pro';
-const OPENWEATHER_PLAN: OpenWeatherPlan = process.env.OPENWEATHER_PLAN as OpenWeatherPlan || 'free';
+// --- patch: abbiamo rimosso la gestione dei piani e usiamo solo API Free
+// Per futuri riferimenti: OpenWeather offre piani 'free' e 'pro' con API diverse
 
 // --- patch: mappa per tenere traccia delle richieste in corso
 const pendingRequests: Map<string, Promise<any>> = new Map();
@@ -113,17 +113,14 @@ export const getWeatherData = async (city: string, countryCode?: string): Promis
 };
 
 /**
- * Fetch weather data from the appropriate API based on the subscription plan
+ * Fetch weather data using the free OpenWeather API
  */
 const fetchWeatherData = async (city: string, countryCode?: string): Promise<WeatherData | null> => {
   try {
-    if (OPENWEATHER_PLAN === 'pro') {
-      // --- patch: per utenti Pro, utilizza One Call 3.0
-      return await fetchOneCallWeather(city, countryCode);
-    } else {
-      // --- patch: per utenti Free, usa la combinazione di API gratuite
-      return await fetchFreeWeather(city, countryCode);
-    }
+    logInfo('WEATHER', `Utilizzo API standard (Free plan) per ${city}`);
+    const result = await fetchFreeWeather(city, countryCode);
+    logInfo('WEATHER', `Dati meteo recuperati con successo per ${city}`);
+    return result;
   } catch (error) {
     logError('WEATHER', `Errore nel recupero dati meteo: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
@@ -228,111 +225,27 @@ export const fetchWeather = async (cityInput?: string, countryCode?: string): Pr
   }
 };
 
-// --- patch: implementazione per utenti con piano Pro
+// --- NOTA: Questa funzione è stata rimossa in quanto utilizza l'API OneCall che richiede un piano Pro di OpenWeather
+// Per riferimento futuro, implementazione dell'API OneCall 3.0 per utenti con piano Pro
+/*
 const fetchOneCallWeather = async (city: string, countryCode?: string): Promise<WeatherData | null> => {
-  try {
-    // Prima dobbiamo ottenere le coordinate dalla città
-    const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${API_KEY}`;
-    logInfo('WEATHER', `Geocoding API call: ${redact(geoUrl)}`);
-    
-    const geoResponse = await fetchWithRetry(geoUrl);
-    if (!geoResponse.ok) {
-      throw createError(ErrorType.API, `Geocoding API error: ${geoResponse.status}`, new Error(geoResponse.statusText));
-    }
-    
-    const geoData = await geoResponse.json();
-    if (!geoData || geoData.length === 0) {
-      throw createError(ErrorType.API, 'Location not found', new Error('No location data returned from geocoding API'));
-    }
-    
-    const { lat, lon, country } = geoData[0];
-    
-    // Otteniamo i dati meteo da One Call 3.0
-    const oneCallUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
-    logInfo('WEATHER', `One Call API call: ${redact(oneCallUrl)}`);
-    
-    const oneCallResponse = await fetchWithRetry(oneCallUrl);
-    if (!oneCallResponse.ok) {
-      throw createError(ErrorType.API, `One Call API error: ${oneCallResponse.status}`, new Error(oneCallResponse.statusText));
-    }
-    
-    const oneCallData = await oneCallResponse.json();
-    
-    // --- patch: Ottieni dati di allerta AEMET solo se il paese è la Spagna
-    let alertMsg = '';
-    if (country === 'ES' || countryCode === 'ES') {
-      try {
-        const aemetUrl = 'https://opendata.aemet.es/opendata/api/avisos/active/area/63';
-        logInfo('WEATHER', `AEMET warnings call: ${redact(aemetUrl)}`);
-        const aemetResponse = await fetchWithRetry(aemetUrl);
-        
-        if (aemetResponse.ok) {
-          const aemetData = await aemetResponse.json();
-          if (aemetData && aemetData.length > 0) {
-            alertMsg = aemetData[0].description || 'Alerta meteorológica activa';
-          }
-        }
-      } catch (aemetError) {
-        logError('WEATHER', `Errore nel recupero allerta AEMET: ${aemetError instanceof Error ? aemetError.message : String(aemetError)}`);
-      }
-    }
-    
-    // Mappiamo i dati alla nostra struttura
-    const current = oneCallData.current;
-    const hourlyForecast = oneCallData.hourly.slice(0, 8).map((hour: any) => ({
-      time: formatTime(hour.dt),
-      temperature: Math.round(hour.temp),
-      condition: mapWeatherCondition(hour.weather[0].id)
-    }));
-    
-    // Prendi l'allerta da One Call se non l'abbiamo da AEMET
-    if (!alertMsg && oneCallData.alerts && oneCallData.alerts.length > 0) {
-      alertMsg = oneCallData.alerts[0].description;
-    }
-    
-    const fullWeatherData: WeatherData = {
-      location: city,
-      temperature: Math.round(current.temp),
-      feelsLike: Math.round(current.feels_like),
-      humidity: current.humidity,
-      windSpeed: Math.round(current.wind_speed * 3.6),
-      condition: mapWeatherCondition(current.weather[0].id),
-      alert: alertMsg,
-      lat,
-      lon,
-      hourlyForecast,
-      pressure: current.pressure,
-      visibility: current.visibility ? Math.round(current.visibility / 1000) : undefined,
-      sunrise: current.sunrise,
-      sunset: current.sunset,
-      windDirection: current.wind_deg,
-      windGust: current.wind_gust ? Math.round(current.wind_gust * 3.6) : undefined,
-      clouds: current.clouds,
-      uvIndex: current.uvi
-    };
-    
-    const cacheKey = `weather_${city.toLowerCase().replace(/\s+/g, '_')}`;
-    const newEntry: WeatherCacheEntry = {
-      data: fullWeatherData,
-      timestamp: Date.now(),
-      latitude: lat,
-      longitude: lon,
-    };
-    setCacheItem(CacheNamespace.WEATHER_DATA, cacheKey, newEntry, WEATHER_CACHE_TTL);
-    logInfo('WEATHER', `Dati meteo da One Call salvati in cache per ${city}`);
-    
-    return fullWeatherData;
-  } catch (error) {
-    logError('WEATHER', `Errore nel recupero dati One Call: ${error instanceof Error ? error.message : String(error)}`);
-    throw error;
-  }
+  // Prima ottenere coordinate dalla città tramite geocoding API
+  // Poi chiamare OneCall API: https://api.openweathermap.org/data/3.0/onecall
+  // Gestire la risposta e formattare i dati secondo l'interfaccia WeatherData
+  // Include previsioni orarie e gestione allerte meteo
 };
+*/
 
 // --- patch: implementazione per utenti con piano Free
 const fetchFreeWeather = async (city: string, countryCode?: string): Promise<WeatherData | null> => {
   try {
-    // Otteniamo i dati meteo correnti
-    const currentUrl = `${BASE_URL}/weather?q=${city}&units=metric&appid=${API_KEY}`;
+    // Costruisci l'URL con il codice paese se disponibile
+    const locationQuery = countryCode ? `${city},${countryCode}` : city;
+    
+    logInfo('WEATHER', `Chiamata OpenWeather Free API per ${locationQuery}`);
+    
+    // 1. Prima chiamata per ottenere coordinate e dati meteo
+    const currentUrl = `${BASE_URL}/weather?q=${locationQuery}&units=metric&appid=${API_KEY}`;
     logInfo('WEATHER', `Current weather API call: ${redact(currentUrl)}`);
     const currentResponse = await fetchWithRetry(currentUrl);
     
@@ -345,6 +258,7 @@ const fetchFreeWeather = async (city: string, countryCode?: string): Promise<Wea
     }
     
     const currentData = await currentResponse.json();
+    logInfo('WEATHER', `Dati meteo correnti ricevuti per ${locationQuery}: ${JSON.stringify(currentData).substring(0, 200)}...`);
     
     // Otteniamo la previsione oraria da OpenWeather
     const forecastUrl = `${BASE_URL}/forecast?q=${city}&units=metric&appid=${API_KEY}`;
@@ -360,6 +274,7 @@ const fetchFreeWeather = async (city: string, countryCode?: string): Promise<Wea
     }
     
     const forecastData = await forecastResponse.json();
+    logInfo('WEATHER', `Dati previsione ricevuti per ${locationQuery}: ${JSON.stringify(forecastData.list?.[0] || {}).substring(0, 200)}...`);
     
     // Estrai le previsioni orarie
     const hourlyForecast = forecastData.list.slice(0, 8).map((item: any) => ({
@@ -374,15 +289,19 @@ const fetchFreeWeather = async (city: string, countryCode?: string): Promise<Wea
     // --- patch: Ottieni dati di allerta AEMET solo se il paese è la Spagna
     if (currentData.sys?.country === 'ES' || countryCode === 'ES') {
       try {
-        const aemetUrl = 'https://opendata.aemet.es/opendata/api/avisos/active/area/63';
-        logInfo('WEATHER', `AEMET warnings call: ${redact(aemetUrl)}`);
-        const aemetResponse = await fetchWithRetry(aemetUrl);
+        // Utilizza il servizio AEMET parametrizzato per ottenere gli avvisi meteo
+        // Questo utilizzerà automaticamente determineAemetArea internamente
+        const aemetAlerts = await aemetService.getWeatherAlerts(
+          currentData.coord.lat, 
+          currentData.coord.lon
+        );
         
-        if (aemetResponse.ok) {
-          const aemetData = await aemetResponse.json();
-          if (aemetData && aemetData.length > 0) {
-            alertMsg = aemetData[0].description || 'Alerta meteorológica activa';
-          }
+        if (aemetAlerts.length > 0) {
+          // Prendiamo il primo avviso disponibile
+          alertMsg = aemetAlerts[0].description || 'Alerta meteorológica activa';
+          logInfo('WEATHER', `Recuperato avviso AEMET: ${alertMsg.substring(0, 100)}...`);
+        } else {
+          logInfo('WEATHER', `Nessun avviso AEMET attivo per le coordinate [${currentData.coord.lat}, ${currentData.coord.lon}]`);
         }
       } catch (aemetError) {
         logError('WEATHER', `Errore nel recupero allerta AEMET: ${aemetError instanceof Error ? aemetError.message : String(aemetError)}`);
@@ -451,14 +370,41 @@ export const getMockWeatherData = (city: string): WeatherData => {
   const cityKey = city.toLowerCase();
   const coords = defaultCoords[cityKey] || { lat: 28.6, lon: -17.8 }; // Generic La Palma coords
 
+  // Genera temperature realistiche basate su data e ora attuali
+  const now = new Date();
+  const month = now.getMonth(); // 0-11
+  const hour = now.getHours(); // 0-23
+  
+  // Temperatura base per stagione nelle Canarie
+  let baseTemp = 22; // primavera/autunno
+  if (month >= 5 && month <= 8) { // estate (giugno-settembre)
+    baseTemp = 26;
+  } else if (month >= 9 || month <= 2) { // inverno (ottobre-marzo)
+    baseTemp = 20;
+  }
+  
+  // Variazione per ora del giorno
+  let hourVariation = 0;
+  if (hour >= 12 && hour <= 15) { // ore più calde
+    hourVariation = 3;
+  } else if (hour >= 0 && hour <= 6) { // notte
+    hourVariation = -3;
+  }
+  
+  // Piccola variazione casuale ±1
+  const randomVariation = Math.floor(Math.random() * 3) - 1;
+  
+  // Calcola temperatura realistica
+  const temp = Math.round(baseTemp + hourVariation + randomVariation);
+  
   return {
     location: city,
-    temperature: 24,
-    feelsLike: 26,
+    temperature: temp,
+    feelsLike: temp + 1,
     humidity: 65,
-    windSpeed: 28,
-    condition: 'sunny',
-    alert: 'Calima moderada durante las próximas 24 horas.',
+    windSpeed: 15 + Math.floor(Math.random() * 10),
+    condition: hour >= 6 && hour <= 18 ? 'sunny' : 'clear',
+    alert: '📊 [DATOS SIMULADOS] No se pudieron obtener datos meteorológicos actuales.',
     lat: coords.lat,
     lon: coords.lon,
     pressure: 1013,

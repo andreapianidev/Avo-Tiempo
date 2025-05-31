@@ -1,10 +1,39 @@
 import { logError, handleApiError, ErrorType } from './errorService';
+import { logInfo } from '../utils/logger';
 
 // AEMET API token
 const AEMET_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbmRyZWFwaWFuaS5kZXZAZ21haWwuY29tIiwianRpIjoiZTRiOGJhOWMtNmMyMS00ZmQ4LWI3ODEtMThmMTBiYzk1OTRiIiwiaXNzIjoiQUVNRVQiLCJpYXQiOjE3NDczMDUyOTksInVzZXJJZCI6ImU0YjhiYTljLTZjMjEtNGZkOC1iNzgxLTE4ZjEwYmM5NTk0YiIsInJvbGUiOiIifQ.vGLVP33tdCaeUPw0APaxiCHCSe3G9aGCxGDDqHvJUWk';
 
 // AEMET API base URL
 const AEMET_BASE_URL = 'https://opendata.aemet.es/opendata/api';
+
+// Endpoint base per ottenere gli avvisi meteo (CORRETTO: rimosso /api duplicato)
+const AEMET_ALERTS_BASE_ENDPOINT = '/avisos_cap/ultimoelaborado/area';
+
+// Aree geografiche disponibili in AEMET
+export enum AemetArea {
+  CANARIAS = 'can',        // Isole Canarie
+  PENINSULA = 'esp',       // Penisola Iberica
+  BALEARES = 'bal',        // Isole Baleari
+  ANDALUCIA = 'and',       // Andalusia
+  ARAGON = 'arn',          // Aragona
+  ASTURIAS = 'ast',        // Asturie
+  CANTABRIA = 'coo',       // Cantabria
+  CASTILLA_LEON = 'cle',   // Castiglia e León
+  CASTILLA_MANCHA = 'clm', // Castiglia-La Mancia
+  CATALUNA = 'cat',        // Catalogna
+  VALENCIA = 'val',        // Comunità Valenciana
+  EXTREMADURA = 'ext',     // Estremadura
+  GALICIA = 'gal',         // Galizia
+  MADRID = 'mad',          // Madrid
+  MURCIA = 'mur',          // Murcia
+  NAVARRA = 'nav',         // Navarra
+  PAIS_VASCO = 'pva',      // Paesi Baschi
+  RIOJA = 'rio'            // La Rioja
+}
+
+// Area predefinita (Canarie)
+const DEFAULT_AREA = AemetArea.CANARIAS;
 
 // OpenWeather API key (using the one from the DEVELOPERS.md)
 const OPENWEATHER_KEY = 'b33c9835879f888134e97c6d58d6e4a7';
@@ -109,19 +138,70 @@ const isDevEnvironment = typeof window !== 'undefined' && window.location.hostna
 
 /**
  * Aggiunge automaticamente un proxy CORS durante lo sviluppo locale. In produzione la URL rimane invariata.
- * Per semplicità usiamo corsproxy.io che è sufficiente per lo sviluppo.
+ * Utilizziamo un sistema di proxy CORS con fallback multipli per maggiore resilienza.
  */
-const withCorsProxy = (url: string): string => {
-  return isDevEnvironment ? `https://corsproxy.io/?${encodeURIComponent(url)}` : url;
+const corsProxies = [
+  (url: string) => `https://cors-anywhere.herokuapp.com/${url}`,
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+];
+
+// Indice del proxy attualmente in uso
+let currentProxyIndex = 0;
+
+// Contatore di fallimenti per proxy
+const proxyFailures: Record<number, number> = {};
+
+/**
+ * Cambia proxy dopo un fallimento
+ */
+const rotateProxy = () => {
+  currentProxyIndex = (currentProxyIndex + 1) % corsProxies.length;
+  logInfo('CORS', `Rotating to CORS proxy ${currentProxyIndex + 1}/${corsProxies.length}`);
+  return currentProxyIndex;
 };
 
 /**
- * Fetches weather alerts from AEMET API
+ * Aggiunge un proxy CORS in ambiente di sviluppo
  */
-const fetchAemetAlerts = async (): Promise<WeatherAlert[]> => {
+const withCorsProxy = (url: string): string => {
+  if (!isDevEnvironment) return url; // In produzione non usiamo proxy
+  
+  // In sviluppo usiamo un proxy con sistema di fallback
+  return corsProxies[currentProxyIndex](url);
+};
+
+// Mappa delle province per area
+const areaProvinces: Record<AemetArea, string[]> = {
+  [AemetArea.CANARIAS]: ['Las Palmas', 'Santa Cruz de Tenerife', 'Tenerife', 'Gran Canaria', 'Lanzarote', 'Fuerteventura', 'La Palma', 'La Gomera', 'El Hierro'],
+  [AemetArea.PENINSULA]: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Bilbao', 'Alicante'],
+  [AemetArea.BALEARES]: ['Mallorca', 'Menorca', 'Ibiza', 'Formentera', 'Palma'],
+  [AemetArea.ANDALUCIA]: ['Sevilla', 'Málaga', 'Cádiz', 'Granada', 'Córdoba', 'Almería', 'Jaén', 'Huelva'],
+  [AemetArea.ARAGON]: ['Zaragoza', 'Huesca', 'Teruel'],
+  [AemetArea.ASTURIAS]: ['Oviedo', 'Gijón', 'Avilés'],
+  [AemetArea.CANTABRIA]: ['Santander', 'Torrelavega'],
+  [AemetArea.CASTILLA_LEON]: ['Valladolid', 'Burgos', 'Salamanca', 'León', 'Palencia', 'Zamora', 'Segovia', 'Soria', 'Ávila'],
+  [AemetArea.CASTILLA_MANCHA]: ['Toledo', 'Ciudad Real', 'Albacete', 'Guadalajara', 'Cuenca'],
+  [AemetArea.CATALUNA]: ['Barcelona', 'Tarragona', 'Lérida', 'Gerona'],
+  [AemetArea.VALENCIA]: ['Valencia', 'Alicante', 'Castellón'],
+  [AemetArea.EXTREMADURA]: ['Badajoz', 'Cáceres'],
+  [AemetArea.GALICIA]: ['La Coruña', 'Pontevedra', 'Lugo', 'Orense'],
+  [AemetArea.MADRID]: ['Madrid'],
+  [AemetArea.MURCIA]: ['Murcia', 'Cartagena'],
+  [AemetArea.NAVARRA]: ['Pamplona'],
+  [AemetArea.PAIS_VASCO]: ['Bilbao', 'San Sebastián', 'Vitoria'],
+  [AemetArea.RIOJA]: ['Logroño']
+};
+
+/**
+ * Fetches weather alerts from AEMET API for a specific area
+ * @param area - Area code to fetch alerts for (default: Canary Islands)
+ */
+const fetchAemetAlerts = async (area: AemetArea = DEFAULT_AREA): Promise<WeatherAlert[]> => {
   try {
     // First API call to get the data URL
-    const response = await fetch(withCorsProxy(`${AEMET_BASE_URL}/avisos_cap/?api_key=${AEMET_API_KEY}`));
+    const alertsUrl = `${AEMET_BASE_URL}${AEMET_ALERTS_BASE_ENDPOINT}/${area}?api_key=${AEMET_API_KEY}`;
+    const response = await fetch(withCorsProxy(alertsUrl));
     
     if (!response.ok) {
       throw new Error(`AEMET API error: ${response.status} ${response.statusText}`);
@@ -142,15 +222,15 @@ const fetchAemetAlerts = async (): Promise<WeatherAlert[]> => {
     
     const alertsData: AemetAlert[] = await dataResponse.json();
     
-    // Filter alerts for Canary Islands
-    const canaryProvinces = ['Las Palmas', 'Santa Cruz de Tenerife', 'Tenerife', 'Gran Canaria', 'Lanzarote', 'Fuerteventura', 'La Palma', 'La Gomera', 'El Hierro'];
-    const canaryAlerts = alertsData.filter(alert => 
-      canaryProvinces.some(province => 
+    // Filter alerts for the specified area using the corresponding provinces
+    const provinces = areaProvinces[area];
+    const filteredAlerts = alertsData.filter(alert => 
+      provinces.some(province => 
         alert.provincia.includes(province) || alert.nombreZona.includes(province)
       )
     );
     
-    return normalizeAemetAlerts(canaryAlerts);
+    return normalizeAemetAlerts(filteredAlerts);
   } catch (error) {
     logError({
       type: ErrorType.API,
@@ -164,10 +244,33 @@ const fetchAemetAlerts = async (): Promise<WeatherAlert[]> => {
 /**
  * Fetches weather alerts from OpenWeather API as a backup
  */
+/**
+ * Verifica se un codice di condizione meteo OpenWeather rappresenta una condizione estrema
+ * che dovrebbe generare un avviso
+ */
+const isExtremeCondition = (conditionCode: number): boolean => {
+  // Codici di condizioni meteorologiche estreme secondo la documentazione OpenWeather
+  // https://openweathermap.org/weather-conditions
+  const extremeConditions = [
+    // Temporali
+    200, 201, 202, 210, 211, 212, 221, 230, 231, 232,
+    // Pioggia intensa
+    502, 503, 504, 511, 522, 531,
+    // Neve intensa
+    602, 622,
+    // Atmosfera pericolosa
+    762, 771, 781
+  ];
+  
+  return extremeConditions.includes(conditionCode);
+};
+
+// Utilizziamo solo l'API gratuita per i dati meteo come specificato nei requisiti
 const fetchOpenWeatherAlerts = async (lat: number, lon: number): Promise<WeatherAlert[]> => {
   try {
+    // Utilizziamo l'API gratuita di OpenWeather
     const response = await fetch(
-      `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_KEY}&exclude=current,minutely,hourly,daily`
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_KEY}&units=metric&lang=es`
     );
     
     if (!response.ok) {
@@ -175,7 +278,22 @@ const fetchOpenWeatherAlerts = async (lat: number, lon: number): Promise<Weather
     }
     
     const data = await response.json();
-    const alerts = data.alerts || [];
+    
+    // L'API gratuita non ha una proprietà alerts diretta, ma possiamo usare informazioni dal campo weather
+    // per generare avvisi basati sulle condizioni meteo attuali
+    const weatherCondition = data.weather && data.weather[0];
+    const alerts: OpenWeatherAlert[] = [];
+    
+    if (weatherCondition && isExtremeCondition(weatherCondition.id)) {
+      alerts.push({
+        event: weatherCondition.main,
+        description: weatherCondition.description,
+        start: Date.now(),
+        end: Date.now() + 3600000, // Assumiamo un'ora di durata
+        sender_name: 'OpenWeather API Free',
+        tags: [weatherCondition.main.toLowerCase()]
+      });
+    }
     
     return normalizeOpenWeatherAlerts(alerts);
   } catch (error) {
@@ -228,13 +346,40 @@ const fetchMunicipalityForecast = async (municipalityId: string) => {
 };
 
 /**
+ * Determina l'area AEMET appropriata in base alle coordinate geografiche
+ * @param lat - Latitudine
+ * @param lon - Longitudine
+ */
+const determineAemetArea = (lat: number, lon: number): AemetArea => {
+  // Isole Canarie approssimativamente tra lat 27-29.5 e lon -18.5--13
+  if (lat >= 27 && lat <= 29.5 && lon >= -18.5 && lon <= -13) {
+    return AemetArea.CANARIAS;
+  }
+  // Isole Baleari approssimativamente tra lat 38.5-40 e lon 1-4.5
+  if (lat >= 38.5 && lat <= 40 && lon >= 1 && lon <= 4.5) {
+    return AemetArea.BALEARES;
+  }
+  // Per altre località della Spagna continentale, determina l'area in base a coordinate più precise
+  // Questo è un approccio semplificato; un'implementazione completa richiederebbe un sistema di geocoding più sofisticato
+  
+  // Se non riusciamo a determinare un'area specifica, usiamo la penisola iberica come default
+  return AemetArea.PENINSULA;
+};
+
+/**
  * Gets weather alerts with fallback strategy
  * First tries AEMET, then falls back to OpenWeather if AEMET fails
+ * @param lat - Latitude of the location
+ * @param lon - Longitude of the location
+ * @param area - Optional AEMET area code. If not provided, will be determined from coordinates
  */
-const getWeatherAlerts = async (lat: number, lon: number): Promise<WeatherAlert[]> => {
+const getWeatherAlerts = async (lat: number, lon: number, area?: AemetArea): Promise<WeatherAlert[]> => {
   try {
+    // Determina l'area AEMET appropriata se non specificata
+    const aemetArea = area || determineAemetArea(lat, lon);
+    
     // Try AEMET first
-    const aemetAlerts = await fetchAemetAlerts();
+    const aemetAlerts = await fetchAemetAlerts(aemetArea);
     
     if (aemetAlerts.length > 0) {
       return aemetAlerts;

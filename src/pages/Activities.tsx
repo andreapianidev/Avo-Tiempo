@@ -3,8 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faHiking, faBicycle, faUmbrellaBeach, faUtensils, faChild, 
   faMuseum, faCalendarAlt, faMapMarkedAlt, faSpinner, faFilter,
-  faCalendarPlus, faCloud, faUsers, faLightbulb
+  faCalendarPlus, faCloud, faUsers, faLightbulb, faCloudSun // Added faCloudSun
 } from '@fortawesome/free-solid-svg-icons';
+import { IonAlert, IonButton } from '@ionic/react'; // Added IonAlert and IonButton for the new section
 
 // Importazioni componenti con workaround per TypeScript
 import ActivityCard from '../components/ActivityCard';
@@ -23,12 +24,14 @@ import ActivityScheduler from '../components/ActivityScheduler';
 import SmartWeatherMatcher from '../components/SmartWeatherMatcher';
 // @ts-ignore
 import SocialActivities from '../components/SocialActivities';
+import SpontaneousExplorerWidget from '../components/SpontaneousExplorerWidget'; // Importa il nuovo widget
 
 // Importazioni servizi
 import { getRecommendedActivities, getRelevantPOIs } from '../services/activitiesService';
 import { fetchWeather } from '../services/weatherService';
 import { ActivityCategory, RatedActivity } from '../types/activities';
 import { WeatherData } from '../services/weatherService';
+import { GeoCoords } from '../services/geolocationService'; // Assicurati che GeoCoords sia importato
 
 const Activities: React.FC = () => {
   const [activities, setActivities] = useState<RatedActivity[]>([]);
@@ -46,6 +49,32 @@ const Activities: React.FC = () => {
   const [showWeatherMatcher, setShowWeatherMatcher] = useState(false);
   const [showSocialActivities, setShowSocialActivities] = useState(false);
   const [activeInnovation, setActiveInnovation] = useState<RatedActivity | null>(null);
+
+  // Nuovo stato per l'alert informativo degli strumenti innovativi
+  const [toolInfoAlert, setToolInfoAlert] = useState<{show: boolean, toolName: string | null, message: string | null}>({show: false, toolName: null, message: null});
+
+  // Funzione per mostrare l'alert informativo
+  const showToolInfoAlert = (toolName: string) => {
+    let messageText = '';
+    switch (toolName) {
+      case 'Pianificatore Attività':
+        messageText = "Per usare il Pianificatore, trova un'attività che ti piace e clicca sull'icona 'Pianifica' (un calendario con un '+') sulla sua scheda. Potrai aggiungerla al tuo programma personale!";
+        break;
+      case 'Meteo Matcher':
+        messageText = "Per usare il Meteo Matcher, clicca sull'icona 'Meteo-Match' (una nuvola) sulla scheda di un'attività. L'IA analizzerà la compatibilità con il meteo attuale e futuro!";
+        break;
+      case 'Social & Community':
+        messageText = "Per esplorare le funzionalità Social, clicca sull'icona 'Social' (un gruppo di persone) sulla scheda di un'attività. Potrai vedere chi altro è interessato, unirti a gruppi o condividere!";
+        break;
+      default:
+        messageText = `Usa i pulsanti dedicati sulle schede attività per accedere a questa funzionalità innovativa.`;
+    }
+    setToolInfoAlert({
+      show: true,
+      toolName: toolName,
+      message: messageText
+    });
+  };
 
   // Categorie disponibili
   const categories = [
@@ -140,8 +169,8 @@ const Activities: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen overflow-auto pb-20">
-      <div className="container mx-auto px-4 py-4 flex-1">
+    <div className="flex flex-col min-h-screen overflow-y-auto overflow-x-hidden pb-20 h-full">
+      <div className="container mx-auto px-4 py-4 flex-1 overflow-visible">
         {/* Componenti Modali per Funzionalità Innovative */}
         {showScheduler && activeInnovation && weatherData && (
           <ActivityScheduler
@@ -194,7 +223,63 @@ const Activities: React.FC = () => {
             ))}
           </div>
         </div>
-        
+
+        {/* Sezione Strumenti Innovativi */}
+        {!isLoading && !error && !showMap && weatherData && (
+          <div className="mb-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-700 mb-3">Potenzia la Tua Esperienza ✨</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              
+              <div className="p-3 border border-gray-200 rounded-lg bg-gray-50 hover:shadow-md transition-shadow flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center mb-1.5">
+                    <FontAwesomeIcon icon={faCalendarPlus} className="text-blue-500 text-xl mr-2.5" />
+                    <h3 className="font-medium text-gray-700">Pianifica Attività</h3>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-2.5">Organizza le tue giornate e non perderti nessun evento.</p>
+                </div>
+                <IonButton size="small" expand="block" fill="outline" color="primary" onClick={() => showToolInfoAlert('Pianificatore Attività')}>
+                    Scopri Come
+                </IonButton>
+              </div>
+              
+              <div className="p-3 border border-gray-200 rounded-lg bg-gray-50 hover:shadow-md transition-shadow flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center mb-1.5">
+                    <FontAwesomeIcon icon={faCloudSun} className="text-orange-500 text-xl mr-2.5" />
+                    <h3 className="font-medium text-gray-700">Meteo Matcher</h3>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-2.5">Trova l'attività perfetta per il meteo o il momento migliore.</p>
+                </div>
+                <IonButton size="small" expand="block" fill="outline" color="warning" onClick={() => showToolInfoAlert('Meteo Matcher')}>
+                    Scopri Come
+                </IonButton>
+              </div>
+              
+              <div className="p-3 border border-gray-200 rounded-lg bg-gray-50 hover:shadow-md transition-shadow flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center mb-1.5">
+                    <FontAwesomeIcon icon={faUsers} className="text-green-500 text-xl mr-2.5" />
+                    <h3 className="font-medium text-gray-700">Social & Community</h3>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-2.5">Condividi avventure, trova compagni e scopri trend locali.</p>
+                </div>
+                <IonButton size="small" expand="block" fill="outline" color="success" onClick={() => showToolInfoAlert('Social & Community')}>
+                    Scopri Come
+                </IonButton>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Widget Giro Esplorativo Improvvisato */}
+        {!isLoading && !error && !showMap && weatherData && (
+          <SpontaneousExplorerWidget 
+            userCoords={{ latitude: weatherData.lat, longitude: weatherData.lon } as GeoCoords} 
+            className="mt-6 mb-4"
+          />
+        )}
+
         {/* Descrizione filtri attivi */}
         {selectedCategory && (
           <div className="mb-4 bg-gray-50 p-3 rounded-lg text-sm flex items-center justify-between">
@@ -322,6 +407,15 @@ const Activities: React.FC = () => {
             </div>
           </>
         )}
+
+        <IonAlert
+          isOpen={toolInfoAlert.show}
+          onDidDismiss={() => setToolInfoAlert({show: false, toolName: null, message: null})}
+          header={toolInfoAlert.toolName || 'Informazione Strumento'}
+          message={toolInfoAlert.message || ''}
+          buttons={['OK']}
+          cssClass='custom-alert-innovative-tools'
+        />
       </div>
     </div>
   );

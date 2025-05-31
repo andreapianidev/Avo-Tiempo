@@ -697,8 +697,7 @@ NOTA: Usa nomi POI specifici dalla lista fornita. Ogni campo è importante, ma p
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages: [{ role: 'user', content: prompt }],
-          stream: false,
-          max_tokens: 250,
+          max_tokens: 2000,
           temperature: 0.7
         })
       });
@@ -716,20 +715,46 @@ NOTA: Usa nomi POI specifici dalla lista fornita. Ogni campo è importante, ma p
       // Parsing della risposta JSON
       let parsedResponse: DailyActivitySuggestionResponse;
       try {
-        parsedResponse = JSON.parse(result);
+        // Pre-processo del risultato per gestire casi comuni di JSON malformato
+        // Rimuove eventuali caratteri non JSON all'inizio e alla fine
+        const cleanedResult = result.trim()
+          .replace(/^[\s\S]*?\{/, '{') // Trova la prima parentesi graffa
+          .replace(/\}[\s\S]*$/, '}'); // Rimuovi tutto dopo l'ultima parentesi graffa
+        
+        console.log('AI Service: JSON pulito da processare:', cleanedResult);
+        
+        try {
+          parsedResponse = JSON.parse(cleanedResult);
+        } catch (parseError) {
+          // Se fallisce ancora, prova a riparare la stringa JSON più aggressivamente
+          console.error('Primo tentativo di parsing fallito, provo a riparare:', parseError);
+          
+          // Mostra i primi e ultimi 100 caratteri per debug
+          const startChars = cleanedResult.substring(0, 100);
+          const endChars = cleanedResult.substring(cleanedResult.length - 100);
+          console.error(`Inizio JSON: ${startChars}...`);
+          console.error(`Fine JSON: ...${endChars}`);
+          
+          // Fallback finale: genera una risposta di fallback
+          throw new Error('JSON malformato, impossibile riparare');
+        }
         
         // Verifica che tutti i campi siano presenti
         if (!parsedResponse.title || !parsedResponse.description) {
+          console.error('Campi mancanti nella risposta:', parsedResponse);
           throw new Error('Risposta incompleta');
         }
         
         // Assicurati che poiSuggestions sia un array
         if (!Array.isArray(parsedResponse.poiSuggestions)) {
+          console.warn('poiSuggestions non è un array, inizializzato vuoto');
           parsedResponse.poiSuggestions = [];
         }
       } catch (err) {
         console.error('Error parsing AI response:', err);
-        throw new Error('Impossibile analizzare la risposta AI');
+        // Type check per assicurarsi che err sia un Error object
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        throw new Error(`Impossibile analizzare la risposta AI: ${errorMessage}`);
       }
       
       // Salva in cache

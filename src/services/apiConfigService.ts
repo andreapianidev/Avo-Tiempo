@@ -20,7 +20,7 @@ export const API_KEYS = {
 // URL di base dei servizi
 export const API_BASE_URLS = {
   OPENWEATHER_CURRENT: 'https://api.openweathermap.org/data/2.5',
-  OPENWEATHER_ONECALL: 'https://api.openweathermap.org/data/3.0',
+  // NOTA: Rimosso riferimento a OPENWEATHER_ONECALL per evitare chiamate all'API a pagamento
   MAPBOX: 'https://api.mapbox.com',
   OVERPASS: [
     'https://overpass-api.de/api/interpreter',            // Server principale in Germania

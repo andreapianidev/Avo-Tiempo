@@ -19,6 +19,7 @@ import WeatherActivityCorrelation from '../components/WeatherActivityCorrelation
 import AirQualityTrendChart from '../components/AirQualityTrendChart';
 import WeatherPatternAnalysis from '../components/WeatherPatternAnalysis';
 import WeatherHistory from '../components/WeatherHistory';
+import MicroclimateAlert from '../components/MicroclimateAlert';
 import { fetchWeather, WeatherData, getMockWeatherData } from '../services/weatherService';
 import { setCurrentLocation, getCurrentLocation, listenToLocationChanges } from '../services/appStateService';
 import { getAIInsight } from '../services/aiService';
@@ -419,6 +420,22 @@ const Home: React.FC = () => {
             Los datos meteorológicos se actualizan automáticamente cada hora o cuando cambias de ubicación.
           </p>
         </div>
+        
+        {/* Alerts per microclimi vicini con meteo migliore */}
+        {weatherData && (
+          <MicroclimateAlert
+            currentLocation={weatherData.location}
+            coords={{
+              latitude: weatherData.lat,
+              longitude: weatherData.lon
+            }}
+            onNavigate={(lat, lon, name) => {
+              // Funzione per navigare alla località con meteo migliore
+              console.log(`Navigazione verso: ${name} (${lat}, ${lon})`);
+              // Qui potremmo aprire una mappa o navigare alla località
+            }}
+          />
+        )}
         
         {/* Sezione con i grafici di analisi */}
         {weatherData && (
