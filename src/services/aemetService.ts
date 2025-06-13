@@ -1,11 +1,16 @@
 import { logError, handleApiError, ErrorType } from './errorService';
 import { logInfo } from '../utils/logger';
 
+// AEMET API base URL
+const AEMET_BASE_URL = 'https://opendata.aemet.es/opendata/api';
+
 // AEMET API token
 const AEMET_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbmRyZWFwaWFuaS5kZXZAZ21haWwuY29tIiwianRpIjoiZTRiOGJhOWMtNmMyMS00ZmQ4LWI3ODEtMThmMTBiYzk1OTRiIiwiaXNzIjoiQUVNRVQiLCJpYXQiOjE3NDczMDUyOTksInVzZXJJZCI6ImU0YjhiYTljLTZjMjEtNGZkOC1iNzgxLTE4ZjEwYmM5NTk0YiIsInJvbGUiOiIifQ.vGLVP33tdCaeUPw0APaxiCHCSe3G9aGCxGDDqHvJUWk';
 
-// AEMET API base URL
-const AEMET_BASE_URL = 'https://opendata.aemet.es/opendata/api';
+// Funzione helper per creare URL AEMET con API key
+const createAemetUrl = (endpoint: string) => {
+  return `${AEMET_BASE_URL}${endpoint}?api_key=${AEMET_API_KEY}`;
+};
 
 // Endpoint base per ottenere gli avvisi meteo (CORRETTO: rimosso /api duplicato)
 const AEMET_ALERTS_BASE_ENDPOINT = '/avisos_cap/ultimoelaborado/area';
@@ -200,8 +205,8 @@ const areaProvinces: Record<AemetArea, string[]> = {
 const fetchAemetAlerts = async (area: AemetArea = DEFAULT_AREA): Promise<WeatherAlert[]> => {
   try {
     // First API call to get the data URL
-    const alertsUrl = `${AEMET_BASE_URL}${AEMET_ALERTS_BASE_ENDPOINT}/${area}?api_key=${AEMET_API_KEY}`;
-    const response = await fetch(withCorsProxy(alertsUrl));
+    const alertsEndpoint = `${AEMET_ALERTS_BASE_ENDPOINT}/${area}`;
+    const response = await fetch(withCorsProxy(createAemetUrl(alertsEndpoint)));
     
     if (!response.ok) {
       throw new Error(`AEMET API error: ${response.status} ${response.statusText}`);
@@ -313,8 +318,9 @@ const fetchOpenWeatherAlerts = async (lat: number, lon: number): Promise<Weather
 const fetchMunicipalityForecast = async (municipalityId: string) => {
   try {
     // First API call to get the data URL
+    const forecastEndpoint = `/prediccion/especifica/municipio/diaria/${municipalityId}`;
     const response = await fetch(
-      withCorsProxy(`${AEMET_BASE_URL}/prediccion/especifica/municipio/diaria/${municipalityId}?api_key=${AEMET_API_KEY}`)
+      withCorsProxy(createAemetUrl(forecastEndpoint))
     );
     
     if (!response.ok) {

@@ -2,8 +2,18 @@ import { createError, ErrorType } from './errorService';
 import { getCacheItem, setCacheItem, CacheNamespace } from './cacheService';
 import { logAppError } from './appStateService';
 
+// Tipo per le località predefinite
+type LocationKey = 'el paso' | 'santa cruz de tenerife' | 'las palmas' | 'default';
+
+// Interfaccia per i dati di località
+interface LocationData {
+  lat: number;
+  lon: number;
+  name: string;
+}
+
 // Coordenadas predeterminadas para ubicaciones canarias populares
-export const DEFAULT_LOCATIONS = {
+export const DEFAULT_LOCATIONS: Record<LocationKey, LocationData> = {
   'el paso': { lat: 28.6586, lon: -17.7797, name: 'El Paso, La Palma' }, // El Paso, La Palma
   'santa cruz de tenerife': { lat: 28.4636, lon: -16.2518, name: 'Santa Cruz de Tenerife' },
   'las palmas': { lat: 28.1248, lon: -15.4300, name: 'Las Palmas de Gran Canaria' },
@@ -123,15 +133,59 @@ export const getCurrentPosition = (useFallback: boolean = false): Promise<GeoCoo
 };
 
 /**
+ * Check if coordinates are in the Canary Islands region
+ * @param coords - Latitude and longitude
+ * @returns Boolean indicating if coords are in Canary Islands
+ */
+const isInCanaryIslands = (coords: GeoCoords): boolean => {
+  // Canary Islands bounding box (approximate)
+  const canaryBounds = {
+    minLat: 27.6, maxLat: 29.5,
+    minLon: -18.2, maxLon: -13.4
+  };
+  
+  return coords.latitude >= canaryBounds.minLat && 
+         coords.latitude <= canaryBounds.maxLat && 
+         coords.longitude >= canaryBounds.minLon && 
+         coords.longitude <= canaryBounds.maxLon;
+};
+
+/**
  * Get city name from coordinates using reverse geocoding with OpenStreetMap
  * @param coords - Latitude and longitude
  * @returns Promise with city name
  */
 export const getCityFromCoords = async (coords: GeoCoords): Promise<string> => {
   try {
+    // Verifica se siamo nelle Canarie per prevenire errori di geocoding
+    if (isInCanaryIslands(coords)) {
+      console.log('[GEOLOCATION] Coordinate nelle Isole Canarie detectate');
+      
+      // Trova la località canaria più vicina alle coordinate fornite
+      let closestLocation: LocationKey | null = null;
+      let minDistance = Number.MAX_VALUE;
+      
+      for (const [locationName, location] of Object.entries(DEFAULT_LOCATIONS)) {
+        const distance = Math.sqrt(
+          Math.pow(coords.latitude - location.lat, 2) + 
+          Math.pow(coords.longitude - location.lon, 2)
+        );
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestLocation = locationName as LocationKey;
+        }
+      }
+      
+      if (closestLocation && minDistance < 0.1) { // Circa 11km
+        console.log(`[GEOLOCATION] Località corrispondente trovata: ${DEFAULT_LOCATIONS[closestLocation].name}`);
+        return DEFAULT_LOCATIONS[closestLocation].name;
+      }
+    }
+    
     // Using OpenStreetMap Nominatim API for reverse geocoding
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=10&addressdetails=1`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=10&addressdetails=1&countrycodes=es`,
       {
         headers: {
           'Accept-Language': 'es,it', // Prefer Spanish and Italian results
@@ -145,6 +199,13 @@ export const getCityFromCoords = async (coords: GeoCoords): Promise<string> => {
     }
     
     const data = await response.json();
+    
+    // Check if we're in Spain
+    if (data.address && data.address.country_code !== 'es') {
+      console.warn(`[GEOLOCATION] Coordinate fuori dalla Spagna rilevate: ${data.address.country_code}`);
+      console.log('[GEOLOCATION] Usando località predefinita delle Canarie');
+      return DEFAULT_LOCATIONS.default.name;
+    }
     
     // Try to get the city or town name
     let cityName = data.address.city || 

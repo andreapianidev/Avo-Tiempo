@@ -3,9 +3,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMapMarkedAlt, faSpinner, faLayerGroup, faInfo } from '@fortawesome/free-solid-svg-icons';
+import { faMapMarkedAlt, faSpinner, faLayerGroup, faInfo, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { POI } from '../services/osmService';
 import { createError, ErrorType, ErrorSeverity } from '../services/errorService';
+import POIDetails from './POIDetails';
 
 // Mapbox token
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_TOKEN || 'pk.eyJ1IjoiYXZvdGllbXBvIiwiYSI6ImNrbTVwZ2JwNjBtNGcydW1xdWRoNDduZGcifQ.r45fLo7JoE7ZUQDymLzQJQ';
@@ -238,24 +239,19 @@ const POIMap: React.FC<POIMapProps> = ({
       
       {/* POI Info panel when selected */}
       {selectedPOI && (
-        <div className="absolute bottom-4 left-2 right-2 bg-white p-3 rounded-md shadow-md z-10 max-h-32 overflow-auto">
-          <h3 className="font-bold text-sm mb-1">{selectedPOI.name}</h3>
-          <p className="text-xs text-gray-600 mb-1">
-            {selectedPOI.type} · {selectedPOI.distance < 1000 
-              ? `${Math.round(selectedPOI.distance)} m` 
-              : `${(selectedPOI.distance / 1000).toFixed(1)} km`}
-          </p>
-          {selectedPOI.tags.description && (
-            <p className="text-xs mt-1">{selectedPOI.tags.description}</p>
-          )}
-          <button
-            className="mt-2 text-xs bg-amber-500 text-white px-2 py-1 rounded"
-            onClick={() => {
-              window.open(`https://www.google.com/maps/dir/?api=1&destination=${selectedPOI.lat},${selectedPOI.lon}&travelmode=walking`, '_blank');
-            }}
-          >
-            Cómo llegar
-          </button>
+        <div className="absolute bottom-2 left-2 right-2 bg-white rounded-md shadow-md z-10 max-h-80 overflow-auto">
+          <div className="absolute top-2 right-2 z-20">
+            <button 
+              className="bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
+              onClick={() => setSelectedPOI(null)}
+            >
+              <FontAwesomeIcon icon={faTimes} className="text-gray-600" />
+            </button>
+          </div>
+          <POIDetails 
+            poi={selectedPOI} 
+            className="border-none shadow-none" 
+          />
         </div>
       )}
     </div>

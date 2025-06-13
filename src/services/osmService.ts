@@ -198,10 +198,154 @@ const getPoiCategory = (tags: Record<string, string | undefined>): POI['category
 };
 
 /**
- * Gets the name of a POI, with fallbacks for different language versions
+ * Gets the name of a POI, with fallbacks for different language versions and categories
+ * Genera un nome descrittivo basato su vari tag quando il nome esplicito non è disponibile
  */
 const getPoiName = (tags: Record<string, string | undefined>): string => {
-  return tags['name:es'] || tags.name || tags['name:en'] || 'Punto de interés';
+  // Prima prova a usare il nome esplicito in varie lingue
+  if (tags['name:es'] || tags.name || tags['name:en']) {
+    return tags['name:es'] || tags.name || tags['name:en'] || '';
+  }
+  
+  // Mappa di traduzione per categorie e tipi comuni
+  const categoryNames: Record<string, Record<string, string>> = {
+    amenity: {
+      restaurant: 'Restaurante',
+      cafe: 'Café',
+      bar: 'Bar',
+      pub: 'Pub',
+      fast_food: 'Fast Food',
+      pharmacy: 'Farmacia',
+      hospital: 'Hospital',
+      school: 'Escuela',
+      bank: 'Banco',
+      atm: 'Cajero Automático',
+      parking: 'Aparcamiento',
+      fuel: 'Gasolinera',
+      bench: 'Banco para Sentarse',
+      drinking_water: 'Fuente de Agua',
+      toilets: 'Aseos Públicos',
+      playground: 'Parque Infantil',
+      police: 'Policía'
+    },
+    tourism: {
+      hotel: 'Hotel',
+      guest_house: 'Casa de Huéspedes',
+      viewpoint: 'Mirador',
+      museum: 'Museo',
+      gallery: 'Galería de Arte',
+      information: 'Información Turística',
+      attraction: 'Atracción Turística',
+      artwork: 'Obra de Arte'
+    },
+    leisure: {
+      park: 'Parque',
+      garden: 'Jardín',
+      playground: 'Área Infantil',
+      pitch: 'Campo Deportivo',
+      swimming_pool: 'Piscina',
+      sports_centre: 'Centro Deportivo',
+      beach_resort: 'Resort de Playa'
+    },
+    natural: {
+      beach: 'Playa',
+      peak: 'Montaña',
+      volcano: 'Volcán',
+      cliff: 'Acantilado',
+      tree: 'Árbol Notable',
+      water: 'Zona de Agua',
+      spring: 'Manantial'
+    },
+    shop: {
+      supermarket: 'Supermercado',
+      convenience: 'Tienda de Conveniencia',
+      bakery: 'Panadería',
+      clothes: 'Tienda de Ropa',
+      mall: 'Centro Comercial'
+    },
+    historic: {
+      monument: 'Monumento',
+      castle: 'Castillo',
+      ruins: 'Ruinas',
+      archaeological_site: 'Sitio Arqueológico',
+      memorial: 'Memorial'
+    }
+  };
+  
+  // Cerca nelle categorie conosciute e utilizzale per costruire un nome descrittivo
+  for (const category of Object.keys(categoryNames)) {
+    const value = tags[category];
+    if (value) {
+      const specificName = categoryNames[category][value];
+      if (specificName) {
+        // Aggiungi dettagli aggiuntivi quando disponibili
+        if (tags.ref) return `${specificName} (${tags.ref})`;
+        if (tags.operator) return `${specificName} de ${tags.operator}`;
+        if (tags.brand) return `${specificName} ${tags.brand}`;
+        return specificName;
+      } else {
+        // Se il valore non è nella nostra mappa ma la categoria sì, usa una forma generica
+        const capitalizedValue = value.charAt(0).toUpperCase() + value.slice(1);
+        return `${capitalizedValue}`;
+      }
+    }
+  }
+  
+  // Se abbiamo un qualsiasi tag utile, usalo per costruire un nome
+  if (tags.description) return tags.description;
+  if (tags.ref) return `Ref: ${tags.ref}`;
+  if (tags.ele) return `Altitud: ${tags.ele}m`;
+  
+  // Mappatura per tipi specifici che non hanno categorie esplicite nelle mappe sopra
+  const specificTypeMap: Record<string, string> = {
+    picnic_site: 'Área de Picnic',
+    pitch: 'Campo Deportivo',
+    playground: 'Área de Juegos',
+    viewpoint: 'Mirador',
+    parking: 'Aparcamiento',
+    toilets: 'Servicios',
+    shelter: 'Refugio',
+    camp_site: 'Camping'
+  };
+  
+  // Controlla prima per tipi specifici di POI che potrebbero non essere nelle categorie principali
+  for (const [key, value] of Object.entries(tags)) {
+    if (specificTypeMap[value as string]) {
+      return specificTypeMap[value as string];
+    }
+  }
+  
+  // Fallback generico ma con categoria se disponibile
+  for (const category of ['amenity', 'tourism', 'leisure', 'natural', 'shop', 'historic', 'sport']) {
+    if (tags[category]) {
+      const value = tags[category];
+      const capitalizedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+      const capitalizedValue = value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+      
+      // Controlla se il valore è già in specificTypeMap
+      if (value && specificTypeMap[value]) {
+        return specificTypeMap[value];
+      }
+      
+      return `${capitalizedValue || capitalizedCategory}`;
+    }
+  }
+  
+  // Usa il tipo come nome piuttosto che un generico "Punto de interés"
+  if (tags.leisure === 'pitch') return 'Campo Deportivo';
+  if (tags.leisure === 'picnic_site') return 'Área de Picnic';
+  
+  // Se proprio non abbiamo alternative, usa il valore di un tag comune come nome
+  for (const key of Object.keys(tags)) {
+    if (tags[key] && typeof tags[key] === 'string') {
+      const value = tags[key] as string;
+      if (value.length > 1) {
+        return value.charAt(0).toUpperCase() + value.slice(1);
+      }
+    }
+  }
+  
+  return 'Punto de interés';
 };
 
 /**
