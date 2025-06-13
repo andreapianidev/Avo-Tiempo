@@ -1,62 +1,69 @@
 AVO TIEMPO - CUSTOM LICENSE AGREEMENT
 Copyright (c) 2025 Andrea Piani (andreapianidev@gmail.com)
+All Rights Reserved
 
-This document (the "License") outlines the terms and conditions for use, reproduction, and distribution of the software application known as "Avo Tiempo" (the "Software"), including all associated source code, documentation, and media assets.
+This Software License Agreement (this "Agreement") is a legal agreement between you (either an individual or an entity, referred to as "User" or "You") and Andrea Piani (referred to as "Author"), the sole owner and developer of the software application known as "Avo Tiempo" (referred to as "Software").
 
-1. DEFINITIONS
-   a. "Author" refers to Andrea Piani, the original creator of the Software.
-   b. "Software" refers to the Avo Tiempo application, including all source code, documentation, images, and associated files.
-   c. "Contributor" refers to any individual who contributes code or other material to the Software with the Author's permission.
-   d. "User" refers to any individual or entity accessing, using, or interfacing with the Software.
+By downloading, installing, copying, accessing, or otherwise using the Software, You agree to be bound by the terms of this Agreement. If You do not agree to the terms of this Agreement, do not download, install, copy, access, or use the Software.
 
-2. GRANT OF LICENSE
-   Subject to the terms of this License, the Author hereby grants the following limited rights:
+1.  DEFINITIONS
+    a.  "Software" means the Avo Tiempo application, including but not limited to all executable files, data files, libraries, source code, object code, documentation (whether in machine-readable or printed form), user interfaces, visual designs, images, audio, video, and any other accompanying materials or intellectual property provided by the Author, as well as any updates, upgrades, modifications, or new versions of the Software that may be provided by the Author from time to time.
+    b.  "Commercial Use" means any use of the Software, in whole or in part, for direct or indirect financial gain, or in connection with any business, enterprise, or revenue-generating activity. This includes, but is not limited to, selling the Software, incorporating it into a product or service that is sold, using it to provide paid services, or using it in any way that generates revenue or is intended to generate revenue.
+    c.  "Personal Use" means use of the Software by an individual strictly for private, non-commercial, and non-revenue-generating purposes.
+    d.  "Educational Use" means use of the Software by an individual or an educational institution solely for teaching, learning, or academic research purposes, provided such use is non-commercial.
 
-   a. USE RIGHTS: Users may install and use the Software for personal, non-commercial purposes only.
-      
-   b. MODIFICATION RIGHTS: Users may view, study, and modify the Software for personal educational purposes, but any modified versions may not be distributed without explicit written permission from the Author.
-      
-   c. CONTRIBUTION RIGHTS: Contributors may submit modifications or improvements to the Software for potential inclusion, with the understanding that such contributions, if accepted, become part of the Software and subject to this License.
+2.  GRANT OF LICENSE
+    Subject to your full and ongoing compliance with all terms and conditions of this Agreement, the Author grants You a limited, non-exclusive, non-transferable, non-sublicensable, revocable license to:
+    a.  Install and use one (1) copy of the Software on a single device owned or controlled by You, solely for Your Personal Use or Educational Use.
+    b.  View and study the source code of the Software, if made available by the Author, solely for Personal Use or Educational Use to understand its functionality and design.
 
-3. RESTRICTIONS
-   The following restrictions apply to all Users:
+3.  LICENSE RESTRICTIONS
+    The rights granted to You in Section 2 are subject to the following express restrictions. You shall not, and shall not permit any third party to:
+    a.  Engage in any Commercial Use of the Software. Any and all Commercial Use is strictly prohibited unless You have obtained prior, explicit, written authorization from the Author. Such authorization may be subject to a separate commercial licensing agreement and payment of applicable fees.
+    b.  Copy, reproduce, or duplicate the Software, in whole or in part, except for a single backup copy for archival purposes, provided that such backup copy includes all original copyright and proprietary notices.
+    c.  Distribute, sell, rent, lease, sublicense, assign, or otherwise transfer the Software or any rights granted under this Agreement to any third party, whether for profit or not.
+    d.  Modify, adapt, translate, reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code of the Software, or create derivative works based on the Software, except to the extent that such activities are expressly permitted by applicable law despite this limitation, or for the limited purpose of Personal Use or Educational Use as defined herein, provided that any such modifications are not distributed.
+    e.  Remove, alter, or obscure any copyright, trademark, patent, or other proprietary notices or labels on or in the Software.
+    f.  Use the Software in any manner that violates any applicable local, state, national, or international law or regulation.
+    g.  Use the Software for any purpose that is unlawful, unethical, or harmful, or in any way that could damage, disable, overburden, or impair the Software or interfere with any other party's use and enjoyment of the Software.
+    h.  Use the name "Avo Tiempo", the Author's name, or any associated logos or trademarks to endorse or promote any product or service derived from or related to the Software without the Author's prior written consent.
 
-   a. COMMERCIAL USE PROHIBITION: The Software may not be used, in whole or in part, for any commercial purposes without explicit written permission from the Author. Commercial purposes include but are not limited to:
-      - Selling the Software or derivatives
-      - Using the Software in a commercial product or service
-      - Using the Software to generate revenue directly or indirectly
-      
-   b. DISTRIBUTION LIMITATION: Users may not redistribute the Software, in original or modified form, without explicit written permission from the Author.
-      
-   c. ATTRIBUTION REQUIREMENT: Any authorized use of the Software must include prominent attribution to the Author, including the name "Andrea Piani" and reference to the original repository URL.
-      
-   d. TRADEMARK PROTECTION: The name "Avo Tiempo" and any associated logos or branding may not be used to endorse or promote products or services without specific prior written permission from the Author.
+4.  INTELLECTUAL PROPERTY OWNERSHIP
+    The Software is licensed, not sold, to You. The Author retains all right, title, and interest in and to the Software, including all copyrights, patents, trademarks, trade secrets, and other intellectual property rights and proprietary rights therein. This Agreement does not grant You any ownership interest in the Software. All rights not expressly granted to You under this Agreement are reserved by the Author.
 
-4. OPEN SOURCE COMPONENTS
-   The Software may include or depend upon third-party open source components, each of which is governed by its own license terms. This License does not modify or supersede those license terms for the respective components.
+5.  THIRD-PARTY COMPONENTS
+    The Software may contain or be distributed with certain third-party software components, including open-source software, which are subject to their own applicable license terms. This Agreement does not alter any rights or obligations You may have under such third-party licenses. You are responsible for complying with the terms of all applicable third-party licenses.
 
-5. INTELLECTUAL PROPERTY RIGHTS
-   All intellectual property rights, including but not limited to copyrights, patents, trademarks, and trade secrets, relating to the Software remain with the Author. Nothing in this License shall be interpreted as transferring any ownership rights to Users or Contributors.
+6.  CONTRIBUTIONS
+    If You choose to provide the Author with any feedback, suggestions, ideas, improvements, or other contributions related to the Software ("Contributions"), You hereby grant the Author a perpetual, irrevocable, worldwide, royalty-free, fully paid-up, non-exclusive license to use, reproduce, modify, adapt, publish, translate, create derivative works from, distribute, perform, and display such Contributions for any purpose, without any obligation to compensate You or acknowledge Your authorship. You represent and warrant that You have all necessary rights to grant such a license for Your Contributions.
 
-6. CONTRIBUTIONS
-   Any contribution deliberately submitted for inclusion in the Software shall be under the terms of this License, without additional terms or conditions, unless explicitly stated otherwise by the Author.
+7.  NO WARRANTY
+    THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT ANY WARRANTIES OF ANY KIND, EXPRESS, IMPLIED, OR STATUTORY. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE AUTHOR EXPRESSLY DISCLAIMS ALL WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT OF THIRD-PARTY RIGHTS, AND ANY WARRANTIES ARISING OUT OF COURSE OF DEALING, USAGE, OR TRADE.
+    THE AUTHOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE, UNINTERRUPTED, SECURE, OR THAT DEFECTS WILL BE CORRECTED. YOU ACKNOWLEDGE THAT YOUR USE OF THE SOFTWARE IS AT YOUR SOLE RISK.
 
-7. WARRANTY DISCLAIMER
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+8.  LIMITATION OF LIABILITY
+    TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, PUNITIVE, OR EXEMPLARY DAMAGES (INCLUDING, WITHOUT LIMITATION, DAMAGES FOR LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES) ARISING OUT OF OR RELATING TO THIS AGREEMENT OR YOUR USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF THE AUTHOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+    THE AUTHOR'S TOTAL CUMULATIVE LIABILITY TO YOU ARISING FROM OR RELATING TO THIS AGREEMENT OR THE SOFTWARE, WHETHER IN CONTRACT, TORT (INCLUDING NEGLIGENCE), OR OTHERWISE, SHALL NOT EXCEED THE AMOUNT OF TEN EUROS (EUR 10.00) OR THE AMOUNT YOU PAID FOR THE SOFTWARE, IF ANY, WHICHEVER IS GREATER.
+    SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OF CERTAIN WARRANTIES OR THE LIMITATION OR EXCLUSION OF LIABILITY FOR CERTAIN DAMAGES. ACCORDINGLY, SOME OF THE ABOVE DISCLAIMERS AND LIMITATIONS MAY NOT APPLY TO YOU.
 
-8. TERMINATION
-   This License and the rights granted hereunder will terminate automatically upon any breach by User of the terms of this License. Users who have received copies or rights from the User pursuant to this License will not have their licenses terminated provided such individuals or entities remain in full compliance.
+9.  TERMINATION
+    This Agreement is effective until terminated. Your rights under this Agreement will terminate automatically without notice from the Author if You fail to comply with any term(s) of this Agreement. Upon termination, You shall immediately cease all use of the Software and destroy all copies, full or partial, of the Software in Your possession or control.
+    The Author reserves the right to terminate this Agreement at any time, for any reason, with or without notice.
+    Sections 3, 4, 5, 6, 7, 8, 9, 10, 11, and 12 shall survive any termination of this Agreement.
 
-9. GOVERNING LAW
-   This License shall be governed by and construed in accordance with the laws of Italy, excluding its conflicts of law provisions. Legal proceedings related to this License shall be brought in the courts having jurisdiction in Italy.
+10. GOVERNING LAW AND JURISDICTION
+    This Agreement shall be governed by and construed in accordance with the laws of Italy, without regard to its conflict of law principles. Any legal suit, action, or proceeding arising out of or related to this Agreement or the Software shall be instituted exclusively in the competent courts of Italy. You waive any and all objections to the exercise of jurisdiction over You by such courts and to venue in such courts.
 
-10. ENTIRE AGREEMENT
-    This License constitutes the entire agreement between the parties with respect to the use of the Software and supersedes all prior or contemporaneous understandings regarding such subject matter.
+11. ENTIRE AGREEMENT
+    This Agreement constitutes the entire agreement between You and the Author concerning the Software and supersedes all prior or contemporaneous understandings, agreements, representations, and warranties, both written and oral, with respect to the Software.
 
-11. RESERVATION OF RIGHTS
-    All rights not expressly granted under this License are reserved by the Author. No additional permissions or rights are granted by implication, estoppel, or otherwise.
+12. SEVERABILITY
+    If any provision of this Agreement is held by a court of competent jurisdiction to be invalid, illegal, or unenforceable, such provision shall be modified by the court and interpreted so as to best accomplish the objectives of the original provision to the fullest extent permitted by law, and the remaining provisions of this Agreement shall remain in full force and effect.
 
-For permission requests, please contact:
-Andrea Piani
-Email: andreapianidev@gmail.com
-Website: http://linktr.ee/andreapianidev
+13. CONTACT INFORMATION
+    For any questions concerning this Agreement, or if You wish to request permissions not granted hereunder, please contact the Author:
+    Andrea Piani
+    Email: andreapianidev@gmail.com
+    Website: http://linktr.ee/andreapianidev
+
+By using the Software, You acknowledge that You have read this Agreement, understood it, and agree to be bound by its terms and conditions.
