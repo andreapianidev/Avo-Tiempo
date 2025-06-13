@@ -1,92 +1,189 @@
-# 🌤️ Contribuire ad Avo Tiempo 🌈
+# 🌤️ Contributing to Avo Tiempo | Contribuir a Avo Tiempo 🌈
 
 <div align="center">
   <img src="public/assets/logo.png" alt="Avo Tiempo Logo" width="120"/>
-  <h3>Unisciti a noi per migliorare l'esperienza meteo delle Canarie! ✨</h3>
+  <h3>Join us to improve the weather experience in the Canary Islands! ✨</h3>
+  <h3>¡Únete a nosotros para mejorar la experiencia meteorológica en las Islas Canarias! ✨</h3>
 </div>
 
-## 👋 Benvenuto!
+*Read this in: [English](#english) | [Español](#español)*
 
-Innanzitutto, **grazie per il tuo interesse** a contribuire ad Avo Tiempo! 🎉 
+<a name="english"></a>
+# English
 
-> **Stiamo cercando attivamente volontari** che vogliano aiutarci a migliorare questa app e renderla ancora più utile per la comunità delle Canarie e per i suoi visitatori. 
+## 👋 Welcome!
 
-Qualsiasi contributo, dalle correzioni di bug alle nuove funzionalità, dalla documentazione alle traduzioni, è enormemente apprezzato.
+First of all, **thank you for your interest** in contributing to Avo Tiempo! 🎉 
 
-## 🚀 Come puoi aiutare
+> **We are actively seeking volunteers** who want to help us improve this app and make it even more useful for the Canary Islands community and its visitors.
 
-Ci sono molti modi per contribuire al progetto:
+Any contribution, from bug fixes to new features, from documentation to translations, is greatly appreciated.
 
-- 🐛 **Trovare e segnalare bug**
-- ✨ **Proporre nuove funzionalità**
-- 📚 **Migliorare la documentazione**
-- 🌐 **Aggiungere o migliorare le traduzioni**
-- 💻 **Scrivere codice e correggere bug**
-- 🔍 **Rivedere pull request**
-- 🗺️ **Migliorare i dati POI locali**
-- 📱 **Testare su dispositivi diversi**
+## 🚀 How You Can Help
 
-## 📋 Processo di contribuzione
+There are many ways to contribute to the project:
 
-### 1️⃣ Prepararsi
+- 🐛 **Find and report bugs**
+- ✨ **Propose new features**
+- 📚 **Improve documentation**
+- 🌐 **Add or improve translations**
+- 💻 **Write code and fix bugs**
+- 🔍 **Review pull requests**
+- 🗺️ **Improve local POI data**
+- 📱 **Test on different devices**
 
-- **Fork** del repository
-- **Clone** del tuo fork: `git clone https://github.com/il-tuo-username/Avo-Tiempo.git`
-- **Imposta l'ambiente** seguendo le istruzioni nel README.md
-- **Crea un branch** per le tue modifiche: `git checkout -b nome-feature`
+## 📋 Contribution Process
 
-### 2️⃣ Sviluppare
+### 1️⃣ Prepare
 
-- 🧹 **Segui lo stile del codice** esistente
-- ✅ **Aggiungi test** per le nuove funzionalità
-- 📝 **Aggiorna la documentazione** se necessario
-- 🔄 **Committi spesso** con messaggi chiari: `git commit -m "Aggiunge X per risolvere Y"`
-- 🔍 **Verifica** che il tuo codice passi tutti i test: `npm test`
+- **Fork** the repository
+- **Clone** your fork: `git clone https://github.com/your-username/Avo-Tiempo.git`
+- **Set up the environment** following the instructions in README.md
+- **Create a branch** for your changes: `git checkout -b feature-name`
 
-### 3️⃣ Inviare
+### 2️⃣ Develop
 
-- 🔄 **Aggiorna** il tuo branch con le ultime modifiche dal repository principale
-- ⬆️ **Push** delle tue modifiche: `git push origin nome-feature`
-- 📩 **Crea una pull request** spiegando chiaramente le tue modifiche e il loro scopo
+- 🧹 **Follow the existing code style**
+- ✅ **Add tests** for new features
+- 📝 **Update documentation** if needed
+- 🔄 **Commit often** with clear messages: `git commit -m "Add X to solve Y"`
+- 🔍 **Verify** that your code passes all tests: `npm test`
+
+### 3️⃣ Submit
+
+- 🔄 **Update** your branch with the latest changes from the main repository
+- ⬆️ **Push** your changes: `git push origin feature-name`
+- 📩 **Create a pull request** clearly explaining your changes and their purpose
 
 ## 💎 Best Practices
 
-- 📱 **Design responsive**: Assicurati che le tue modifiche funzionino bene su tutti i dispositivi
-- 🔒 **Sicurezza**: Mai includere API key o informazioni sensibili nel codice
-- ⚡ **Performance**: Considera sempre l'impatto sulla performance, specialmente per la modalità offline
-- 🌍 **Accessibilità**: Mantieni l'app accessibile a tutti gli utenti
-- 🗣️ **Internazionalizzazione**: Supporta le traduzioni esistenti
+- 📱 **Responsive design**: Make sure your changes work well on all devices
+- 🔒 **Security**: Never include API keys or sensitive information in code
+- ⚡ **Performance**: Always consider the impact on performance, especially for offline mode
+- 🌍 **Accessibility**: Keep the app accessible to all users
+- 🗣️ **Internationalization**: Support existing translations
 
-## 🔍 Priorità di sviluppo
+## 🔍 Development Priorities
 
-Stiamo particolarmente cercando aiuto in queste aree:
+We are particularly seeking help in these areas:
 
-1. 📍 **Miglioramento dei dati POI** - aggiungere più punti di interesse locali
-2. 🌡️ **Estensione dei dati meteorologici** - integrare più fonti di dati
-3. 📱 **Testing su dispositivi iOS/Android** - migliorare l'esperienza nativa
-4. 🤖 **Miglioramenti IA** - rendere i consigli più accurati e personalizzati
-5. 📄 **Documentazione** - migliorare guide e tutorial
+1. 📍 **POI Data Improvement** - adding more local points of interest
+2. 🌡️ **Weather Data Extension** - integrating more data sources
+3. 📱 **Testing on iOS/Android devices** - improving the native experience
+4. 🤖 **AI Improvements** - making recommendations more accurate and personalized
+5. 📄 **Documentation** - improving guides and tutorials
 
-## 🎨 Design e UX
+## 🎨 Design and UX
 
-Seguiamo una filosofia di design incentrata sull'utente con un focus su:
+We follow a user-centered design philosophy with a focus on:
 
-- 🌈 **Semplicità e chiarezza**
-- 🖌️ **Estetica locale** ispirata alle Canarie
-- ⚡ **Interazioni rapide e intuitive**
-- 📱 **Esperienza mobile-first**
+- 🌈 **Simplicity and clarity**
+- 🖌️ **Local aesthetics** inspired by the Canary Islands
+- ⚡ **Quick and intuitive interactions**
+- 📱 **Mobile-first experience**
 
-## 📞 Contattaci
+## 📞 Contact Us
 
-Hai domande o hai bisogno di aiuto?
+Do you have questions or need help?
 
-- 💬 **Apri una Issue** su GitHub
+- 💬 **Open an Issue** on GitHub
 - 📧 **Email**: support@avoagency.com
-- 🌐 **Discord**: [Unisciti al nostro server](https://discord.gg/avoagency)
+- 🌐 **Discord**: [Join our server](https://discord.gg/avoagency)
 
 ---
 
 <div align="center">
-  <h3>🌟 Grazie per contribuire a rendere Avo Tiempo migliore! 🌟</h3>
-  <p>Con il tuo aiuto, possiamo creare la migliore app meteo e outdoor per le Canarie!</p>
+  <h3>🌟 Thank you for helping make Avo Tiempo better! 🌟</h3>
+  <p>With your help, we can create the best weather and outdoor app for the Canary Islands!</p>
+</div>
+
+---
+
+<a name="español"></a>
+# Español
+
+## 👋 ¡Bienvenido!
+
+En primer lugar, **gracias por tu interés** en contribuir a Avo Tiempo! 🎉 
+
+> **Estamos buscando activamente voluntarios** que quieran ayudarnos a mejorar esta aplicación y hacerla aún más útil para la comunidad de las Islas Canarias y sus visitantes.
+
+Cualquier contribución, desde correcciones de errores hasta nuevas funcionalidades, desde documentación hasta traducciones, es enormemente apreciada.
+
+## 🚀 Cómo puedes ayudar
+
+Hay muchas formas de contribuir al proyecto:
+
+- 🐛 **Encontrar y reportar errores**
+- ✨ **Proponer nuevas funcionalidades**
+- 📚 **Mejorar la documentación**
+- 🌐 **Añadir o mejorar traducciones**
+- 💻 **Escribir código y corregir errores**
+- 🔍 **Revisar pull requests**
+- 🗺️ **Mejorar los datos de POI locales**
+- 📱 **Probar en diferentes dispositivos**
+
+## 📋 Proceso de contribución
+
+### 1️⃣ Prepararse
+
+- **Fork** del repositorio
+- **Clonar** tu fork: `git clone https://github.com/tu-nombre-usuario/Avo-Tiempo.git`
+- **Configurar el entorno** siguiendo las instrucciones en README.md
+- **Crear una rama** para tus cambios: `git checkout -b nombre-funcionalidad`
+
+### 2️⃣ Desarrollar
+
+- 🧹 **Seguir el estilo de código** existente
+- ✅ **Añadir tests** para las nuevas funcionalidades
+- 📝 **Actualizar la documentación** si es necesario
+- 🔄 **Hacer commits frecuentes** con mensajes claros: `git commit -m "Añade X para resolver Y"`
+- 🔍 **Verificar** que tu código pasa todas las pruebas: `npm test`
+
+### 3️⃣ Enviar
+
+- 🔄 **Actualizar** tu rama con los últimos cambios del repositorio principal
+- ⬆️ **Push** de tus cambios: `git push origin nombre-funcionalidad`
+- 📩 **Crear un pull request** explicando claramente tus cambios y su propósito
+
+## 💎 Mejores Prácticas
+
+- 📱 **Diseño responsive**: Asegúrate de que tus cambios funcionen bien en todos los dispositivos
+- 🔒 **Seguridad**: Nunca incluyas claves API o información sensible en el código
+- ⚡ **Rendimiento**: Considera siempre el impacto en el rendimiento, especialmente para el modo offline
+- 🌍 **Accesibilidad**: Mantén la aplicación accesible para todos los usuarios
+- 🗣️ **Internacionalización**: Apoya las traducciones existentes
+
+## 🔍 Prioridades de desarrollo
+
+Estamos especialmente buscando ayuda en estas áreas:
+
+1. 📍 **Mejora de datos POI** - añadir más puntos de interés locales
+2. 🌡️ **Extensión de datos meteorológicos** - integrar más fuentes de datos
+3. 📱 **Pruebas en dispositivos iOS/Android** - mejorar la experiencia nativa
+4. 🤖 **Mejoras de IA** - hacer las recomendaciones más precisas y personalizadas
+5. 📄 **Documentación** - mejorar guías y tutoriales
+
+## 🎨 Diseño y UX
+
+Seguimos una filosofía de diseño centrada en el usuario con énfasis en:
+
+- 🌈 **Simplicidad y claridad**
+- 🖌️ **Estética local** inspirada en las Islas Canarias
+- ⚡ **Interacciones rápidas e intuitivas**
+- 📱 **Experiencia mobile-first**
+
+## 📞 Contáctanos
+
+¿Tienes preguntas o necesitas ayuda?
+
+- 💬 **Abre un Issue** en GitHub
+- 📧 **Email**: support@avoagency.com
+- 🌐 **Discord**: [Únete a nuestro servidor](https://discord.gg/avoagency)
+
+---
+
+<div align="center">
+  <h3>🌟 ¡Gracias por ayudar a mejorar Avo Tiempo! 🌟</h3>
+  <p>Con tu ayuda, podemos crear la mejor aplicación meteorológica y de actividades al aire libre para las Islas Canarias!</p>
 </div>
