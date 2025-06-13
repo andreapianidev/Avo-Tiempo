@@ -124,6 +124,39 @@ const WeatherTrendChart: React.FC<WeatherTrendChartProps> = ({ lat, lon, locatio
     }
   };
 
+  // Funzione per convertire abbreviazioni dei giorni in spagnolo in date valide
+  const parseSpanishDayAbbr = (dayString: string): Date => {
+    // Mappa di corrispondenza tra abbreviazioni spagnole e indici dei giorni della settimana
+    const spanishDayMap: {[key: string]: number} = {
+      'lun': 1, // Lunedì
+      'mar': 2, // Martedì
+      'mié': 3, // Mercoledì
+      'jue': 4, // Giovedì
+      'vie': 5, // Venerdì
+      'sáb': 6, // Sabato
+      'dom': 0  // Domenica
+    };
+    
+    // Verifica se la stringa è un'abbreviazione spagnola
+    const lowerDayString = dayString.toLowerCase();
+    if (spanishDayMap.hasOwnProperty(lowerDayString)) {
+      const today = new Date();
+      const currentDayIndex = today.getDay();
+      const targetDayIndex = spanishDayMap[lowerDayString];
+      
+      // Calcola quanti giorni aggiungere per arrivare al giorno desiderato
+      let daysToAdd = targetDayIndex - currentDayIndex;
+      if (daysToAdd <= 0) daysToAdd += 7; // Se è nel passato, vai alla prossima settimana
+      
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + daysToAdd);
+      return targetDate;
+    }
+    
+    // Se non è un'abbreviazione, prova a interpretarla come data normale
+    return new Date(dayString);
+  };
+
   const prepareChartData = () => {
     // Prepara le etichette (giorni della settimana) in formato abbreviato
     const labels = trendData.map(day => {
@@ -196,12 +229,21 @@ const WeatherTrendChart: React.FC<WeatherTrendChartProps> = ({ lat, lon, locatio
             
             // Assicuriamoci che la data sia in un formato corretto
             try {
-              const date = new Date(trendData[index].day);
+              // Utilizziamo la funzione parseSpanishDayAbbr per gestire sia abbreviazioni che date normali
+              const date = parseSpanishDayAbbr(trendData[index].day);
+              
               // Verifica che la data sia valida
               if (isNaN(date.getTime())) {
                 console.error('Data non valida:', trendData[index].day);
-                return 'Data non valida';
+                return 'Data non valida'; 
               }
+              
+              // Se è solo un'abbreviazione del giorno, mostra il nome completo del giorno
+              const dayAbbr = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+              if (dayAbbr.includes(trendData[index].day.toLowerCase())) {
+                return date.toLocaleDateString('it-IT', { weekday: 'long' });
+              }
+              
               return date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
             } catch (error) {
               console.error('Errore nella conversione della data:', error);

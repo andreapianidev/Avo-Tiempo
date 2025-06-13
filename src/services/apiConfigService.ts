@@ -14,7 +14,7 @@ export const API_KEYS = {
   OVERPASS: '',
   // Chiave per Mapbox API
   // Per ottenere una chiave: https://account.mapbox.com/auth/signup/
-  MAPBOX: process.env.REACT_APP_MAPBOX_TOKEN || 'pk.eyJ1IjoiYXZvLWFnZW5jeSIsImEiOiJjbHI2NXpleTMwYTRqMmtvMWwzZjcxN3lrIn0.OqH-1tofEf8RQSJBZUn9_g',
+  MAPBOX: process.env.REACT_APP_MAPBOX_TOKEN || '',
 };
 
 // URL di base dei servizi

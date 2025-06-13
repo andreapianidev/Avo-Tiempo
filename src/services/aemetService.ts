@@ -5,11 +5,22 @@ import { logInfo } from '../utils/logger';
 const AEMET_BASE_URL = 'https://opendata.aemet.es/opendata/api';
 
 // AEMET API token
-const AEMET_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbmRyZWFwaWFuaS5kZXZAZ21haWwuY29tIiwianRpIjoiZTRiOGJhOWMtNmMyMS00ZmQ4LWI3ODEtMThmMTBiYzk1OTRiIiwiaXNzIjoiQUVNRVQiLCJpYXQiOjE3NDczMDUyOTksInVzZXJJZCI6ImU0YjhiYTljLTZjMjEtNGZkOC1iNzgxLTE4ZjEwYmM5NTk0YiIsInJvbGUiOiIifQ.vGLVP33tdCaeUPw0APaxiCHCSe3G9aGCxGDDqHvJUWk';
+const AEMET_API_KEY = process.env.REACT_APP_AEMET_API_KEY || '';
 
-// Funzione helper per creare URL AEMET con API key
+// Funzione helper per creare URL AEMET
 const createAemetUrl = (endpoint: string) => {
-  return `${AEMET_BASE_URL}${endpoint}?api_key=${AEMET_API_KEY}`;
+  return `${AEMET_BASE_URL}${endpoint}`;
+};
+
+// Opzioni standard per fetch AEMET
+const getAemetFetchOptions = () => {
+  return {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'api_key': AEMET_API_KEY
+    }
+  };
 };
 
 // Endpoint base per ottenere gli avvisi meteo (CORRETTO: rimosso /api duplicato)
@@ -40,8 +51,8 @@ export enum AemetArea {
 // Area predefinita (Canarie)
 const DEFAULT_AREA = AemetArea.CANARIAS;
 
-// OpenWeather API key (using the one from the DEVELOPERS.md)
-const OPENWEATHER_KEY = 'b33c9835879f888134e97c6d58d6e4a7';
+// OpenWeather API key
+const OPENWEATHER_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || '';
 
 // Types for AEMET API responses
 export interface AemetApiResponse {
@@ -206,7 +217,7 @@ const fetchAemetAlerts = async (area: AemetArea = DEFAULT_AREA): Promise<Weather
   try {
     // First API call to get the data URL
     const alertsEndpoint = `${AEMET_ALERTS_BASE_ENDPOINT}/${area}`;
-    const response = await fetch(withCorsProxy(createAemetUrl(alertsEndpoint)));
+    const response = await fetch(withCorsProxy(createAemetUrl(alertsEndpoint)), getAemetFetchOptions());
     
     if (!response.ok) {
       throw new Error(`AEMET API error: ${response.status} ${response.statusText}`);
@@ -273,9 +284,10 @@ const isExtremeCondition = (conditionCode: number): boolean => {
 // Utilizziamo solo l'API gratuita per i dati meteo come specificato nei requisiti
 const fetchOpenWeatherAlerts = async (lat: number, lon: number): Promise<WeatherAlert[]> => {
   try {
-    // Utilizziamo l'API gratuita di OpenWeather
+    // Utilizziamo l'API gratuita di OpenWeather con proxy CORS in ambiente di sviluppo
+    const openWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_KEY}&units=metric&lang=es`;
     const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_KEY}&units=metric&lang=es`
+      withCorsProxy(openWeatherUrl)
     );
     
     if (!response.ok) {
@@ -320,7 +332,8 @@ const fetchMunicipalityForecast = async (municipalityId: string) => {
     // First API call to get the data URL
     const forecastEndpoint = `/prediccion/especifica/municipio/diaria/${municipalityId}`;
     const response = await fetch(
-      withCorsProxy(createAemetUrl(forecastEndpoint))
+      withCorsProxy(createAemetUrl(forecastEndpoint)),
+      getAemetFetchOptions()
     );
     
     if (!response.ok) {

@@ -3,7 +3,7 @@ import { WeatherAlert } from './aemetService';
 import { POI } from './osmService';
 import cacheService, { CacheNamespace } from './cacheService';
 
-const API_KEY = process.env.REACT_APP_DEEPSEEK_API_KEY || 'sk-69133b720ab34953a15d4f563870cae1'; // Default if not in .env
+const API_KEY = process.env.REACT_APP_DEEPSEEK_API_KEY || ''; // Usa solo la chiave da .env
 const API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 // Cache entry structure for AI insights

@@ -64,7 +64,13 @@ The app will be available at http://localhost:3000
 
 ### Environment Variables
 
-Create a `.env` file in the root directory with the following variables:
+1. Copy the `.env.example` file to create a new `.env` file in the root directory:
+
+```bash
+cp .env.example .env
+```
+
+2. Edit your `.env` file with your API keys:
 
 ```
 REACT_APP_OPENWEATHER_API_KEY=your_openweather_api_key
@@ -72,6 +78,8 @@ REACT_APP_DEEPSEEK_API_KEY=your_deepseek_api_key
 REACT_APP_MAPBOX_TOKEN=your_mapbox_token
 REACT_APP_AEMET_API_KEY=your_aemet_api_key
 ```
+
+3. **IMPORTANT**: Never commit your `.env` file to the repository! It's already in the `.gitignore` file.
 
 ### Building for Production
 
@@ -97,6 +105,51 @@ npx cap open ios
 # Open in Android Studio
 npx cap open android
 ```
+
+### Testing
+
+```bash
+# Run tests
+npm test
+
+# Run tests with coverage
+npm test -- --coverage
+```
+
+## Deployment
+
+### Web Deployment
+
+Avo Tiempo can be deployed to any static web hosting service:
+
+```bash
+# Build for production
+npm run build
+
+# Deploy to Netlify (if you have Netlify CLI installed)
+npm run build && netlify deploy --prod
+
+# Deploy to Vercel (if you have Vercel CLI installed)
+vercel --prod
+```
+
+### Mobile App Deployment
+
+```bash
+# Build for production
+npm run build
+
+# Sync web code with Capacitor
+npx cap sync
+
+# Generate iOS app
+npx cap build ios
+
+# Generate Android app
+npx cap build android
+```
+
+For app store submissions, follow the standard Apple App Store and Google Play Store submission processes.
 
 ## Architecture
 
@@ -158,6 +211,41 @@ npm run format
 ## License
 
 Avo Tiempo is released under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Security
+
+### API Key Management
+
+Avo Tiempo uses several external APIs that require authentication. For security reasons:
+
+1. All API keys are stored in environment variables, not in the source code
+2. The `.env` file is excluded from Git via `.gitignore`
+3. An `.env.example` template is provided for reference
+4. API requests use appropriate authorization mechanisms (headers vs URL parameters)
+
+### Data Privacy
+
+Avo Tiempo respects user privacy:
+
+1. Geolocation data is only used locally and not shared with third parties
+2. User preferences are stored in the browser's local storage
+3. No personal data is collected beyond what's needed for app functionality
+
+## Troubleshooting
+
+### Common Issues
+
+1. **API Error Codes**
+   - 401/403: Check your API keys in the `.env` file
+   - CORS errors: The app uses proxies in development; check proxy configuration
+
+2. **Map Not Loading**
+   - Verify your Mapbox token is correct
+   - Check browser console for specific errors
+
+3. **Offline Mode Issues**
+   - Clear browser cache and reload
+   - Check IndexedDB storage permissions
 
 ## Acknowledgements
 
