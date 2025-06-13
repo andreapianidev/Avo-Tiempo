@@ -15,7 +15,7 @@
 
 ## Overview
 
-Avo Tiempo is a Progressive Web App (PWA) designed to provide comprehensive weather information and outdoor activity recommendations for the Canary Islands and beyond. The app combines multiple data sources including weather forecasts, points of interest (POI), and AI-powered insights to help users plan their outdoor activities with confidence.
+Avo Tiempo is both a Progressive Web App (PWA) and a full-featured native mobile application for iOS and Android (built with Capacitor), designed to provide comprehensive weather information and outdoor activity recommendations for the Canary Islands and beyond. The app combines multiple data sources including weather forecasts, points of interest (POI), and AI-powered insights to help users plan their outdoor activities with confidence.
 
 ### Key Features
 
@@ -26,7 +26,7 @@ Avo Tiempo is a Progressive Web App (PWA) designed to provide comprehensive weat
 - **Offline Support**: Full functionality even without an internet connection
 - **Multi-language**: Available in Spanish and English
 - **Responsive Design**: Works seamlessly on mobile and desktop devices
-- **PWA & Native Apps**: Install directly from browser or download from app stores
+- **PWA & Native Apps**: Install directly from browser as a PWA or download the full native experience from iOS and Android app stores (built with Capacitor)
 
 ## Demo
 
@@ -90,9 +90,9 @@ npm run build
 npm run serve
 ```
 
-### Mobile App Development
+### Native Mobile App Development
 
-Avo Tiempo uses Capacitor for native mobile app development:
+Avo Tiempo is not just a PWA - it's a fully native mobile application built with Capacitor, allowing true native capabilities on both iOS and Android platforms:
 
 ```bash
 # Sync web code with native projects
@@ -132,7 +132,7 @@ npm run build && netlify deploy --prod
 vercel --prod
 ```
 
-### Mobile App Deployment
+### Native App Deployment
 
 ```bash
 # Build for production
@@ -141,14 +141,14 @@ npm run build
 # Sync web code with Capacitor
 npx cap sync
 
-# Generate iOS app
+# Generate native iOS app
 npx cap build ios
 
-# Generate Android app
+# Generate native Android app
 npx cap build android
 ```
 
-For app store submissions, follow the standard Apple App Store and Google Play Store submission processes.
+For app store submissions, follow the standard Apple App Store and Google Play Store submission processes. The app is packaged as a true native application, not just a WebView wrapper, with full access to native device features and optimized performance.
 
 ## Architecture
 
