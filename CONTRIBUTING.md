@@ -87,8 +87,8 @@ We follow a user-centered design philosophy with a focus on:
 Do you have questions or need help?
 
 - 💬 **Open an Issue** on GitHub
-- 📧 **Email**: support@avoagency.com
-- 🌐 **Discord**: [Join our server](https://discord.gg/avoagency)
+- 📧 **Email**: andreapianidev@gmail.com
+- 🌐 **Contact**: [http://linktr.ee/andreapianidev](http://linktr.ee/andreapianidev)
 
 ---
 
@@ -178,8 +178,8 @@ Seguimos una filosofía de diseño centrada en el usuario con énfasis en:
 ¿Tienes preguntas o necesitas ayuda?
 
 - 💬 **Abre un Issue** en GitHub
-- 📧 **Email**: support@avoagency.com
-- 🌐 **Discord**: [Únete a nuestro servidor](https://discord.gg/avoagency)
+- 📧 **Email**: andreapianidev@gmail.com
+- 🌐 **Contacto**: [http://linktr.ee/andreapianidev](http://linktr.ee/andreapianidev)
 
 ---
 
