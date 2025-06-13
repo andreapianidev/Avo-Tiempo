@@ -30,13 +30,12 @@ Avo Tiempo is a Progressive Web App (PWA) designed to provide comprehensive weat
 
 ## Demo
 
-Experience Avo Tiempo at [avoweather.com](https://avoweather.com)
+Experience Avo Tiempo at [https://tiempo.avoagencylapalma.com](https://tiempo.avoagencylapalma.com) - Il sito ufficiale dell'applicazione
 
 <div align="center">
-  <img src="public/assets/screenshots/home-screen.png" alt="Home Screen" width="24%" />
-  <img src="public/assets/screenshots/poi-map.png" alt="POI Map" width="24%" />
-  <img src="public/assets/screenshots/weather-details.png" alt="Weather Details" width="24%" />
-  <img src="public/assets/screenshots/activity-suggestions.png" alt="Activity Suggestions" width="24%" />
+  <img src="https://tiempo.avoagencylapalma.com/assets/screenshots/Screenshot%202025-06-13%20alle%2020.26.05.png" alt="Avo Tiempo Screenshot 1" width="30%" />
+  <img src="https://tiempo.avoagencylapalma.com/assets/screenshots/Screenshot%202025-06-13%20alle%2020.26.25.png" alt="Avo Tiempo Screenshot 2" width="30%" />
+  <img src="https://tiempo.avoagencylapalma.com/assets/screenshots/Screenshot%202025-06-13%20alle%2020.26.40.png" alt="Avo Tiempo Screenshot 3" width="30%" />
 </div>
 
 ## Getting Started
